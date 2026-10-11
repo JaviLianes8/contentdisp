@@ -8,4 +8,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [0.1.0]
 
-- First release.
+- Parse a Content-Disposition header into type, filename and parameters, preferring
+  the decoded RFC 5987 `filename*` over the plain fallback.
+- Build a header from its parts, emitting an ASCII fallback plus a correct `filename*`
+  for non-ASCII names.
+- Tolerate malformed parameters, bad extended values and unknown charsets on parse.
