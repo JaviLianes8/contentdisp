@@ -9,7 +9,7 @@ Progress:
 - [x] Contracts: RFC examples, browser corpus, grammar oracle, typing, README examples
 - [x] Installed wheel e2e test
 - [x] Docs: README, CHANGELOG, docstrings, packaging metadata
-- [ ] Gates: ruff format, ruff check, mypy --strict, pytest
+- [x] Gates: ruff format, ruff check, mypy --strict, pytest
 - [ ] Independent review findings fixed with regression tests
 - [ ] Pull request opened, guard clean
 
