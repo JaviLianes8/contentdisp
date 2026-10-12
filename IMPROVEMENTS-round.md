@@ -7,7 +7,7 @@ Progress:
 - [x] `safe_filename`: path traversal, device names, control and bidi characters, length
 - [x] Builder: header injection blocked, Appendix D fallback, form-data per RFC 7578
 - [x] Contracts: RFC examples, browser corpus, grammar oracle, typing, README examples
-- [ ] Installed wheel e2e test
+- [x] Installed wheel e2e test
 - [x] Docs: README, CHANGELOG, docstrings, packaging metadata
 - [ ] Gates: ruff format, ruff check, mypy --strict, pytest
 - [ ] Independent review findings fixed with regression tests

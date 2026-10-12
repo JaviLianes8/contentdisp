@@ -55,7 +55,7 @@ def main(source: str, target: str) -> None:
         "cases": extract(raw),
     }
     text = json.dumps(document, ensure_ascii=True, indent=1) + "\n"
-    Path(target).write_text(text, encoding="utf-8")
+    Path(target).write_text(text, encoding="utf-8", newline="\n")
     print(f"{len(document['cases'])} cases")
 
 
