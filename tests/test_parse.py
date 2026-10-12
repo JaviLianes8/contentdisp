@@ -116,3 +116,16 @@ def test_rfc_2231_continuations_stay_extension_parameters() -> None:
     result = parse('attachment; filename*0="a"; filename*1="b"', strict=True)
     assert result.filename is None
     assert result.params == {"filename*0": "a", "filename*1": "b"}
+
+
+def test_strict_mode_rejects_a_quoted_pair_of_a_control_character() -> None:
+    with pytest.raises(ValueError, match="quoted-pair"):
+        parse('attachment; filename="a\\\x01b"', strict=True)
+    assert parse('attachment; filename="a\\\tb"', strict=True).filename == "a\tb"
+
+
+@pytest.mark.parametrize("charset", ["UTF-16", "utf-7", "UTF8", "latin1", "unicode_escape"])
+def test_only_utf8_and_iso_8859_1_are_decoded(charset: str) -> None:
+    header = f"attachment; filename=\"plain\"; filename*={charset}''%41%00"
+    assert parse(header).filename == "plain"
+    assert parse(header, strict=True).filename == "plain"
