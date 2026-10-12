@@ -1,0 +1,540 @@
+{
+ "source": "http://greenbytes.de/tech/tc2231/",
+ "sha256": "341d2916ce946f670567f40ce570115d08873f51794aac13ad62047b7e7a6896",
+ "cases": [
+  {
+   "id": "inlonly",
+   "header": "inline",
+   "marker": "",
+   "expect": "This should be equivalent to not including the header at all."
+  },
+  {
+   "id": "inlonlyquoted",
+   "header": "\"inline\"",
+   "marker": "parseerror",
+   "expect": "This is invalid syntax, thus the header should be ignored."
+  },
+  {
+   "id": "inlwithasciifilename",
+   "header": "inline; filename=\"foo.html\"",
+   "marker": "",
+   "expect": "Some UAs use this filename in a subsequent \"save\" operation."
+  },
+  {
+   "id": "inlwithfnattach",
+   "header": "inline; filename=\"Not an attachment!\"",
+   "marker": "",
+   "expect": ""
+  },
+  {
+   "id": "inlwithasciifilenamepdf",
+   "header": "inline; filename=\"foo.pdf\"",
+   "marker": "",
+   "expect": "Some UAs use this filename in a subsequent \"save\" operation. This variation of the test checks whether whatever handles PDF display receives the filename information, and acts upon it (this was tested with the latest Acrobat Reader plugin, or, in the case of Chrome, using the builtin PDF handler)."
+  },
+  {
+   "id": "attonly",
+   "header": "attachment",
+   "marker": "",
+   "expect": "UA should offer to download the resource."
+  },
+  {
+   "id": "attonlyquoted",
+   "header": "\"attachment\"",
+   "marker": "parseerror",
+   "expect": "This is invalid syntax, thus the header should be ignored."
+  },
+  {
+   "id": "attonly403",
+   "header": "attachment",
+   "marker": "",
+   "expect": "UA should report the server status."
+  },
+  {
+   "id": "attonlyucase",
+   "header": "ATTACHMENT",
+   "marker": "",
+   "expect": "UA should offer to download the resource."
+  },
+  {
+   "id": "attwithasciifilename",
+   "header": "attachment; filename=\"foo.html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo.html\"."
+  },
+  {
+   "id": "attwithasciifilename25",
+   "header": "attachment; filename=\"0000000000111111111122222\"",
+   "marker": "",
+   "expect": ""
+  },
+  {
+   "id": "attwithasciifilename35",
+   "header": "attachment; filename=\"00000000001111111111222222222233333\"",
+   "marker": "",
+   "expect": ""
+  },
+  {
+   "id": "attwithasciifnescapedchar",
+   "header": "attachment; filename=\"f\\oo.html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo.html\"."
+  },
+  {
+   "id": "attwithasciifnescapedquote",
+   "header": "attachment; filename=\"\\\"quoting\\\" tested.html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as something like '\"quoting\" tested.html' (stripping the quotes may be ok for security reasons, but getting confused by them is not)."
+  },
+  {
+   "id": "attwithquotedsemicolon",
+   "header": "attachment; filename=\"Here's a semicolon;.html\"",
+   "marker": "",
+   "expect": ""
+  },
+  {
+   "id": "attwithfilenameandextparam",
+   "header": "attachment; foo=\"bar\"; filename=\"foo.html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo.html\"."
+  },
+  {
+   "id": "attwithfilenameandextparamescaped",
+   "header": "attachment; foo=\"\\\"\\\\\";filename=\"foo.html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo.html\"."
+  },
+  {
+   "id": "attwithasciifilenameucase",
+   "header": "attachment; FILENAME=\"foo.html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo.html\"."
+  },
+  {
+   "id": "attwithasciifilenamenq",
+   "header": "attachment; filename=foo.html",
+   "marker": "",
+   "expect": "Note that was invalid according to Section 19.5.1 of RFC 2616."
+  },
+  {
+   "id": "attwithtokfncommanq",
+   "header": "attachment; filename=foo,bar.html",
+   "marker": "parseerror",
+   "expect": ""
+  },
+  {
+   "id": "attwithasciifilenamenqs",
+   "header": "attachment; filename=foo.html ;",
+   "marker": "parseerror",
+   "expect": "The trailing semicolon makes the header field value syntactically incorrect, as no other parameter follows. Thus the header field should be ignored."
+  },
+  {
+   "id": "attemptyparam",
+   "header": "attachment; ;filename=foo",
+   "marker": "parseerror",
+   "expect": "The empty parameter makes the header field value syntactically incorrect, as no other parameter follows. Thus the header field should be ignored."
+  },
+  {
+   "id": "attwithasciifilenamenqws",
+   "header": "attachment; filename=foo bar.html",
+   "marker": "parseerror",
+   "expect": "This is invalid. \"token\" does not allow whitespace."
+  },
+  {
+   "id": "attwithfntokensq",
+   "header": "attachment; filename='foo.bar'",
+   "marker": "",
+   "expect": ""
+  },
+  {
+   "id": "attwithisofnplain",
+   "header": "attachment; filename=\"foo-\u00e4.html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo-\u00e4.html\"."
+  },
+  {
+   "id": "attwithutf8fnplain",
+   "header": "attachment; filename=\"foo-\u00c3\u00a4.html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo-\u00c3\u00a4.html\". Displaying \"foo-\u00e4.html\" instead indicates that the UA tried to be smart by detecting something that happens to look like UTF-8."
+  },
+  {
+   "id": "attwithfnrawpctenca",
+   "header": "attachment; filename=\"foo-%41.html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo-%41.html\". Displaying \"foo-A.html\" instead would indicate that the UA has attempted to percent-decode the parameter."
+  },
+  {
+   "id": "attwithfnusingpct",
+   "header": "attachment; filename=\"50%.html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"50%.html\". This tests how UAs that fails at attwithfnrawpctenca handle \"%\" characters that do not start a \"% hexdig hexdig\" sequence."
+  },
+  {
+   "id": "attwithfnrawpctencaq",
+   "header": "attachment; filename=\"foo-%\\41.html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo-%41.html\"."
+  },
+  {
+   "id": "attwithnamepct",
+   "header": "attachment; name=\"foo-%41.html\"",
+   "marker": "",
+   "expect": "Should be treated as extension parameter, therefore almost any behavior is acceptable."
+  },
+  {
+   "id": "attwithfilenamepctandiso",
+   "header": "attachment; filename=\"\u00e4-%41.html\"",
+   "marker": "",
+   "expect": ""
+  },
+  {
+   "id": "attwithfnrawpctenclong",
+   "header": "attachment; filename=\"foo-%c3%a4-%e2%82%ac.html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo-%c3%a4-%e2%82%ac.html\". Displaying \"foo-\u00e4-\u20ac.html\" instead would indicate that the UA has attempted to percent-decode the parameter (using UTF-8). Displaying something else would indicate that the UA tried to percent-decode, but used a different encoding."
+  },
+  {
+   "id": "attwithasciifilenamews1",
+   "header": "attachment; filename =\"foo.html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo.html\"."
+  },
+  {
+   "id": "attwith2filenames",
+   "header": "attachment; filename=\"foo.html\"; filename=\"bar.html\"",
+   "marker": "invalidsyntax",
+   "expect": "Invalid syntax: parameter 'filename' appears multiple times."
+  },
+  {
+   "id": "attfnbrokentoken",
+   "header": "attachment; filename=foo[1](2).html",
+   "marker": "parseerror",
+   "expect": "This is invalid according to Section 19.5.1 of RFC 2616 and RFC 6266, so UAs should ignore it."
+  },
+  {
+   "id": "attfnbrokentokeniso",
+   "header": "attachment; filename=foo-\u00e4.html",
+   "marker": "parseerror",
+   "expect": "This is invalid, as the umlaut is not a valid token character, so UAs should ignore it."
+  },
+  {
+   "id": "attfnbrokentokenutf",
+   "header": "attachment; filename=foo-\u00c3\u00a4.html",
+   "marker": "parseerror",
+   "expect": "This is invalid, as the umlaut is not a valid token character, so UAs should ignore it."
+  },
+  {
+   "id": "attmissingdisposition",
+   "header": "filename=foo.html",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "attmissingdisposition2",
+   "header": "x=y; filename=foo.html",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "attmissingdisposition3",
+   "header": "\"foo; filename=bar;baz\"; filename=qux",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "attmissingdisposition4",
+   "header": "filename=foo.html, filename=bar.html",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "emptydisposition",
+   "header": "; filename=foo.html",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "doublecolon",
+   "header": ": inline; attachment; filename=foo.html",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "attandinline",
+   "header": "inline; attachment; filename=foo.html",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "attandinline2",
+   "header": "attachment; inline; filename=foo.html",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "attbrokenquotedfn",
+   "header": "attachment; filename=\"foo.html\".txt",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "attbrokenquotedfn2",
+   "header": "attachment; filename=\"bar",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "attbrokenquotedfn3",
+   "header": "attachment; filename=foo\"bar;baz\"qux",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "attmultinstances",
+   "header": "attachment; filename=foo.html, attachment; filename=bar.html",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "attmissingdelim",
+   "header": "attachment; foo=foo filename=bar",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "attmissingdelim2",
+   "header": "attachment; filename=bar foo=foo ",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "attmissingdelim3",
+   "header": "attachment filename=bar",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "attreversed",
+   "header": "filename=foo.html; attachment",
+   "marker": "parseerror",
+   "expect": "This is invalid, so UAs should ignore it."
+  },
+  {
+   "id": "attconfusedparam",
+   "header": "attachment; xfilename=foo.html",
+   "marker": "",
+   "expect": "Should be treated as unnamed attachment."
+  },
+  {
+   "id": "attabspath",
+   "header": "attachment; filename=\"/foo.html\"",
+   "marker": "",
+   "expect": "Either ignore the filename altogether, or discard the path information."
+  },
+  {
+   "id": "attabspathwin",
+   "header": "attachment; filename=\"\\\\foo.html\"",
+   "marker": "",
+   "expect": "Either ignore the filename altogether, or discard the path information."
+  },
+  {
+   "id": "attcdate",
+   "header": "attachment; creation-date=\"Wed, 12 Feb 1997 16:29:51 -0500\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource. When doing so, the creation date should be set to 12 Feb 1997."
+  },
+  {
+   "id": "attmdate",
+   "header": "attachment; modification-date=\"Wed, 12 Feb 1997 16:29:51 -0500\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource. When doing so, the modification date should be set to 12 Feb 1997."
+  },
+  {
+   "id": "dispext",
+   "header": "foobar",
+   "marker": "",
+   "expect": "This should be equivalent to using \"attachment\"."
+  },
+  {
+   "id": "dispextbadfn",
+   "header": "attachment; example=\"filename=example.txt\"",
+   "marker": "",
+   "expect": ""
+  },
+  {
+   "id": "attwithisofn2231iso",
+   "header": "attachment; filename*=iso-8859-1''foo-%E4.html",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo-\u00e4.html\"."
+  },
+  {
+   "id": "attwithfn2231utf8",
+   "header": "attachment; filename*=UTF-8''foo-%c3%a4-%e2%82%ac.html",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo-\u00e4-\u20ac.html\"."
+  },
+  {
+   "id": "attwithfn2231noc",
+   "header": "attachment; filename*=''foo-%c3%a4-%e2%82%ac.html",
+   "marker": "",
+   "expect": "Error: parseerror: ABNF does not match; unmatched sequence: ''foo-%c3%a4-%e2%82%ac.html"
+  },
+  {
+   "id": "attwithfn2231utf8comp",
+   "header": "attachment; filename*=UTF-8''foo-a%cc%88.html",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo-\u00e4.html\"."
+  },
+  {
+   "id": "attwithfn2231utf8-bad",
+   "header": "attachment; filename*=iso-8859-1''foo-%c3%a4-%e2%82%ac.html",
+   "marker": "invalid",
+   "expect": "The octet %82 does not represent a valid ISO-8859-1 code point, so the UA should really ignore the parameter. Error: illegal-octet: 130"
+  },
+  {
+   "id": "attwithfn2231iso-bad",
+   "header": "attachment; filename*=utf-8''foo-%E4.html",
+   "marker": "invalid",
+   "expect": "The octet %E4 does not represent a valid UTF-8 octet sequence, so the UA should really ignore the parameter. Error: illegal-octet: 228"
+  },
+  {
+   "id": "attwithfn2231ws1",
+   "header": "attachment; filename *=UTF-8''foo-%c3%a4.html",
+   "marker": "parseerror",
+   "expect": "The parameter is invalid, thus should be ignored."
+  },
+  {
+   "id": "attwithfn2231ws2",
+   "header": "attachment; filename*= UTF-8''foo-%c3%a4.html",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo-\u00e4.html\"."
+  },
+  {
+   "id": "attwithfn2231ws3",
+   "header": "attachment; filename* =UTF-8''foo-%c3%a4.html",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo-\u00e4.html\"."
+  },
+  {
+   "id": "attwithfn2231quot",
+   "header": "attachment; filename*=\"UTF-8''foo-%c3%a4.html\"",
+   "marker": "invalid",
+   "expect": "The parameter is invalid, thus should be ignored. Error: syntax: RFC 5987 only applies to \"token\" form."
+  },
+  {
+   "id": "attwithfn2231quot2",
+   "header": "attachment; filename*=\"foo%20bar.html\"",
+   "marker": "invalid",
+   "expect": "The parameter is invalid, thus should be ignored. Error: syntax: RFC 5987 only applies to \"token\" form."
+  },
+  {
+   "id": "attwithfn2231singleqmissing",
+   "header": "attachment; filename*=UTF-8'foo-%c3%a4.html",
+   "marker": "invalid",
+   "expect": "The parameter is invalid, thus should be ignored. Error: parseerror: ABNF does not match; unmatched sequence: UTF-8'foo-%c3%a4.html"
+  },
+  {
+   "id": "attwithfn2231nbadpct1",
+   "header": "attachment; filename*=UTF-8''foo%",
+   "marker": "invalid",
+   "expect": "The parameter is invalid, thus should be ignored. Error: parseerror: ABNF does not match; unmatched sequence: %"
+  },
+  {
+   "id": "attwithfn2231nbadpct2",
+   "header": "attachment; filename*=UTF-8''f%oo.html",
+   "marker": "invalid",
+   "expect": "The parameter is invalid, thus should be ignored. Error: parseerror: ABNF does not match; unmatched sequence: %oo.html"
+  },
+  {
+   "id": "attwithfn2231dpct",
+   "header": "attachment; filename*=UTF-8''A-%2541.html",
+   "marker": "",
+   "expect": ""
+  },
+  {
+   "id": "attwithfn2231abspathdisguised",
+   "header": "attachment; filename*=UTF-8''%5cfoo.html",
+   "marker": "",
+   "expect": ""
+  },
+  {
+   "id": "attfncont",
+   "header": "attachment; filename*0=\"foo.\"; filename*1=\"html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo.html\"."
+  },
+  {
+   "id": "attfncontqs",
+   "header": "attachment; filename*0=\"foo\"; filename*1=\"\\b\\a\\r.html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foobar.html\"."
+  },
+  {
+   "id": "attfncontenc",
+   "header": "attachment; filename*0*=UTF-8''foo-%c3%a4; filename*1=\".html\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo-\u00e4.html\"."
+  },
+  {
+   "id": "attfncontlz",
+   "header": "attachment; filename*0=\"foo\"; filename*01=\"bar\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo\"."
+  },
+  {
+   "id": "attfncontnc",
+   "header": "attachment; filename*0=\"foo\"; filename*2=\"bar\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foo\"."
+  },
+  {
+   "id": "attfnconts1",
+   "header": "attachment; filename*1=\"foo.\"; filename*2=\"html\"",
+   "marker": "",
+   "expect": "UA should offer to download, not getting the filename from the header."
+  },
+  {
+   "id": "attfncontord",
+   "header": "attachment; filename*1=\"bar\"; filename*0=\"foo\"",
+   "marker": "",
+   "expect": "UA should offer to download the resource as \"foobar\"."
+  },
+  {
+   "id": "attfnboth",
+   "header": "attachment; filename=\"foo-ae.html\"; filename*=UTF-8''foo-%c3%a4.html",
+   "marker": "",
+   "expect": "Section 4.2 of RFC 5987 and Section 4.3 of RFC 6266 suggest that the RFC 2231/5987 encoded parameter (\"filename*\") should take precedence when understood."
+  },
+  {
+   "id": "attfnboth2",
+   "header": "attachment; filename*=UTF-8''foo-%c3%a4.html; filename=\"foo-ae.html\"",
+   "marker": "",
+   "expect": "Section 4.2 of RFC 5987 and Section 4.3 of RFC 6266 suggest that the RFC 2231/5987 encoded parameter (\"filename*\") should take precedence when understood."
+  },
+  {
+   "id": "attfnboth3",
+   "header": "attachment; filename*0*=ISO-8859-15''euro-sign%3d%a4; filename*=ISO-8859-1''currency-sign%3d%a4",
+   "marker": "",
+   "expect": "A UA that supports could pick either, or ignore both because of the ambiguity."
+  },
+  {
+   "id": "attnewandfn",
+   "header": "attachment; foobar=x; filename=\"foo.html\"",
+   "marker": "",
+   "expect": "\"foobar\" should be ignored, thus \"foo.html\" be used as filename (this tests whether the UA properly skips unknown parameters)."
+  },
+  {
+   "id": "attrfc2047token",
+   "header": "attachment; filename==?ISO-8859-1?Q?foo-=E4.html?=",
+   "marker": "parseerror",
+   "expect": ""
+  },
+  {
+   "id": "attrfc2047quoted",
+   "header": "attachment; filename=\"=?ISO-8859-1?Q?foo-=E4.html?=\"",
+   "marker": "",
+   "expect": ""
+  }
+ ]
+}

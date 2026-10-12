@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import importlib.resources
 
 import contentdisp
 
 # The public API. Add every exported name here as the library grows; this list is the
 # contract and the test below fails if the module and this list disagree.
-PUBLIC_API: list[str] = ["ContentDisposition", "build", "parse"]
+PUBLIC_API: list[str] = ["ContentDisposition", "build", "parse", "safe_filename"]
 
 
 def test_all_lists_exactly_the_public_api() -> None:
