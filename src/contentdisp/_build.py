@@ -2,36 +2,68 @@
 
 from __future__ import annotations
 
-from ._rfc5987 import encode_ext_value
+import re
+import unicodedata
+
+from ._ext_value import encode_ext_value
+from ._grammar import is_token
+
+# Appendix D of RFC 6266: some agents percent-decode "%HH" in the plain filename.
+_PERCENT_ESCAPE = re.compile(r"%(?=[0-9A-Fa-f]{2})")
+# WHATWG HTML, multipart/form-data encoding: the only escapes a browser applies.
+_FORM_DATA_ESCAPES = {"\n": "%0A", "\r": "%0D", '"': "%22"}
 
 
 def build(type: str, filename: str | None = None, **params: str) -> str:
     """Build a Content-Disposition header value.
 
-    A non-ASCII ``filename`` (or parameter) emits both the plain form, with an
-    ASCII fallback, and a correct RFC 5987 ``filename*`` extended form.
+    When the ASCII ``filename="..."`` form cannot carry a value faithfully (non-ASCII,
+    ``\\``, ``"`` or a ``%HH`` sequence, all avoided by RFC 6266 Appendix D) a transliterated
+    fallback is written first and the exact value follows as ``filename*``. For
+    ``form-data`` no ``*`` parameter is written (RFC 7578 4.2): values stay UTF-8 text and
+    only CR, LF and ``"`` are percent-escaped, as browsers do. Keyword names use ``-`` for
+    ``_``. Raises ``ValueError`` for a type or name that is not a token, or a value with
+    control characters other than tab (CR and LF are escaped for ``form-data``).
     """
-    parts = [type.strip().lower()]
-    if filename is not None:
-        parts.extend(_render("filename", filename))
-    for name, value in params.items():
-        parts.extend(_render(name.replace("_", "-").lower(), value))
+    disposition_type = type.strip().lower()
+    if not is_token(disposition_type):
+        raise ValueError(f"disposition type must be a token: {type!r}")
+    form_data = disposition_type == "form-data"
+    items = [] if filename is None else [("filename", filename)]
+    items.extend((name.replace("_", "-").lower(), value) for name, value in params.items())
+    parts = [disposition_type]
+    for name, value in items:
+        if not is_token(name) or name.endswith("*"):
+            raise ValueError(f"parameter name must be a token without '*': {name!r}")
+        if not isinstance(value, str):
+            raise TypeError(f"parameter {name!r} must be a str, not {value.__class__.__name__}")
+        _check_controls(name, value, allow_newlines=form_data)
+        parts.extend(_render_form_data(name, value) if form_data else _render(name, value))
     return "; ".join(parts)
 
 
+def _check_controls(name: str, value: str, *, allow_newlines: bool) -> None:
+    allowed = "\t\r\n" if allow_newlines else "\t"
+    for char in value:
+        if char not in allowed and unicodedata.category(char) in ("Cc", "Cs"):
+            raise ValueError(f"parameter {name!r} contains a control character: {char!r}")
+
+
 def _render(name: str, value: str) -> list[str]:
-    if value.isascii():
-        return [f"{name}={_quote(value)}"]
-    return [
-        f"{name}={_quote(_ascii_fallback(value))}",
-        f"{name}*={encode_ext_value(value)}",
-    ]
+    fallback = ascii_fallback(value)
+    if fallback == value:
+        return [f'{name}="{value}"']
+    return [f'{name}="{fallback}"', f"{name}*={encode_ext_value(value)}"]
 
 
-def _quote(value: str) -> str:
-    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
-    return f'"{escaped}"'
+def _render_form_data(name: str, value: str) -> list[str]:
+    escaped = "".join(_FORM_DATA_ESCAPES.get(char, char) for char in value)
+    return [f'{name}="{escaped}"']
 
 
-def _ascii_fallback(value: str) -> str:
-    return "".join(char if ord(char) < 128 else "_" for char in value)
+def ascii_fallback(value: str) -> str:
+    """An ASCII stand-in safe in a quoted-string without escapes (RFC 6266 Appendix D)."""
+    decomposed = unicodedata.normalize("NFKD", value)
+    letters = "".join(char for char in decomposed if not unicodedata.combining(char))
+    text = "".join(char if char.isascii() and char not in '\\"' else "_" for char in letters)
+    return _PERCENT_ESCAPE.sub("_", text)

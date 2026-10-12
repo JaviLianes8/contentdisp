@@ -2,10 +2,10 @@
 
 Progress:
 - [x] Brainstorm ranked improvements (this file)
-- [ ] Parser: RFC 6266 grammar, strict mode, lenient recovery, bytes input
-- [ ] Extended values: RFC 8187 grammar, UTF-8 and ISO-8859-1 only, bad values ignored
-- [ ] `safe_filename`: path traversal, device names, control and bidi characters, length
-- [ ] Builder: header injection blocked, Appendix D fallback, form-data per RFC 7578
+- [x] Parser: RFC 6266 grammar, strict mode, lenient recovery, bytes input
+- [x] Extended values: RFC 8187 grammar, UTF-8 and ISO-8859-1 only, bad values ignored
+- [x] `safe_filename`: path traversal, device names, control and bidi characters, length
+- [x] Builder: header injection blocked, Appendix D fallback, form-data per RFC 7578
 - [ ] Contracts: RFC examples, browser corpus, grammar oracle, typing, README examples
 - [ ] Installed wheel e2e test
 - [ ] Docs: README, CHANGELOG, docstrings, packaging metadata

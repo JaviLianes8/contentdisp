@@ -9,8 +9,8 @@ from dataclasses import dataclass, field
 class ContentDisposition:
     """A parsed Content-Disposition header.
 
-    ``params`` holds the resolved parameters; an RFC 5987 ``filename*`` value
-    overrides a plain ``filename`` so the decoded name is the one kept.
+    ``type`` is lower-cased. ``params`` maps lower-cased parameter names to their values;
+    a decoded ``name*`` value is stored under ``name`` and overrides the plain one.
     """
 
     type: str
@@ -18,5 +18,10 @@ class ContentDisposition:
 
     @property
     def filename(self) -> str | None:
-        """The file name, preferring the decoded ``filename*`` form when present."""
+        """The advisory file name, preferring ``filename*``. Pass it to ``safe_filename``."""
         return self.params.get("filename")
+
+    @property
+    def is_attachment(self) -> bool:
+        """True unless the type is ``inline``: unknown types count as attachment (RFC 6266 4.2)."""
+        return self.type != "inline"
