@@ -4,18 +4,27 @@ build-backend = "hatchling.build"
 
 [project]
 name = "contentdisp"
-version = "0.1.0"
-description = "Parse and build HTTP Content-Disposition headers, with correct RFC 5987 filename* handling"
+version = "0.2.0"
+description = "Parse and build HTTP Content-Disposition headers per RFC 6266 and RFC 8187, with safe file names"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Javier Lianes", email = "javier@lianes8studio.com" }]
-keywords = ["content-disposition", "http", "header", "rfc5987", "rfc6266", "filename", "attachment"]
+keywords = ["content-disposition", "http", "header", "rfc6266", "rfc8187", "rfc5987", "filename", "attachment", "download", "path traversal", "typed"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries",
     "Typing :: Typed",
 ]
 dependencies = []
@@ -33,6 +42,9 @@ Funding = "https://buymeacoffee.com/jlianesglrs"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/contentdisp"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["IMPROVEMENTS-round.md"]
 
 [tool.ruff]
 line-length = 100
