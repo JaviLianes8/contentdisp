@@ -82,7 +82,7 @@ HAND_DERIVED = {
     "attwithasciifnescapedquote": '"quoting" tested.html',
     "attwithquotedsemicolon": "Here's a semicolon;.html",
     "attwithfntokensq": "'foo.bar'",
-    "attwithfilenamepctandiso": "ä-%41.html",
+    "attwithfilenamepctandiso": "\u00e4-%41.html",
     "attwithfn2231dpct": "A-%41.html",
     "attrfc2047quoted": "=?ISO-8859-1?Q?foo-=E4.html?=",
     "attwithasciifilenamenq": "foo.html",
@@ -107,7 +107,7 @@ def test_an_invalid_extended_parameter_is_ignored(case_id: str) -> None:
 @pytest.mark.parametrize("case_id", ["attfnboth", "attfnboth2"])
 def test_the_extended_form_takes_precedence(case_id: str) -> None:
     assert "should take precedence" in CASES[case_id]["expect"]
-    assert parse(CASES[case_id]["header"], strict=True).filename == "foo-ä.html"
+    assert parse(CASES[case_id]["header"], strict=True).filename == "foo-\u00e4.html"
 
 
 @pytest.mark.parametrize(

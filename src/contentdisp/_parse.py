@@ -10,7 +10,9 @@ from ._model import ContentDisposition
 def parse(header: str | bytes, *, strict: bool = False) -> ContentDisposition:
     """Parse a Content-Disposition field value.
 
-    ``bytes`` are decoded as ISO-8859-1, so obs-text survives. With ``strict=True`` a
+    ``bytes`` are decoded as ISO-8859-1, so obs-text survives; a multipart part header
+    in UTF-8 should be decoded by the caller and passed as ``str``, whose non-ASCII
+    characters count as obs-text inside a quoted-string. With ``strict=True`` a
     departure from the RFC 6266 grammar, a repeated parameter, or a ``name*`` value that
     is malformed or holds octets invalid in its charset raises ``ValueError``. A ``name*``
     in a charset other than UTF-8 or ISO-8859-1 is ignored in both modes. The default

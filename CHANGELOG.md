@@ -14,7 +14,7 @@ All notable changes to this project are documented here. The format follows
   repeated parameter, and a `name*` value that is malformed or holds octets invalid in
   its charset, with a `ValueError` that says where.
 - `safe_filename(name)` reduces an advisory name to a harmless one as RFC 6266 section
-  4.3 asks: last path segment only, control and bidirectional characters removed,
+  4.3 asks: last path segment only, control and invisible format characters removed,
   Windows reserved characters and device names neutralised, leading dots stripped,
   length capped in UTF-8 bytes with the extension kept.
 - `ContentDisposition.is_attachment`: unknown disposition types count as attachment.
@@ -36,7 +36,9 @@ All notable changes to this project are documented here. The format follows
   ASCII fallback with `_` plus an exact `filename*`, instead of backslash escapes;
   accented letters fall back to their base letter instead of `_`.
 - `build("form-data", ...)` never writes `filename*` (RFC 7578 section 4.2): non-ASCII
-  names stay UTF-8 and CR, LF and `"` are percent-escaped, as browsers do.
+  names stay UTF-8 and CR, LF, `"` and `\` are percent-escaped.
+- `build` rejects a parameter given twice (names compare case-insensitively, `_` as `-`).
+- Strict parsing accepts any non-ASCII character of a `str` inside a quoted-string.
 - Documentation cites RFC 8187, which obsoletes RFC 5987.
 
 ## [0.1.0]

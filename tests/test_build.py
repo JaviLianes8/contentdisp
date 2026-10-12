@@ -16,12 +16,12 @@ def test_without_filename() -> None:
 
 
 def test_non_ascii_filename_emits_fallback_first_then_utf8_extended_form() -> None:
-    header = build("attachment", "€ rates.txt")
+    header = build("attachment", "\u20ac rates.txt")
     assert header == "attachment; filename=\"_ rates.txt\"; filename*=UTF-8''%E2%82%AC%20rates.txt"
 
 
 def test_fallback_transliterates_accented_letters() -> None:
-    header = build("attachment", "résumé ä.pdf")
+    header = build("attachment", "r\u00e9sum\u00e9 \u00e4.pdf")
     assert header.startswith("attachment; filename=\"resume a.pdf\"; filename*=UTF-8''")
 
 
@@ -45,7 +45,7 @@ def test_a_lone_percent_sign_stays_plain() -> None:
 
 
 def test_attr_chars_are_not_percent_encoded() -> None:
-    header = build("attachment", "é!#$&+-.^_`|~")
+    header = build("attachment", "\u00e9!#$&+-.^_`|~")
     assert header.endswith("filename*=UTF-8''%C3%A9!#$&+-.^_`|~")
 
 
@@ -88,19 +88,49 @@ def test_non_string_values_are_rejected() -> None:
 
 
 def test_form_data_never_emits_an_extended_parameter() -> None:
-    header = build("form-data", "€.txt", name="file")
-    assert header == 'form-data; filename="€.txt"; name="file"'
+    header = build("form-data", "\u20ac.txt", name="file")
+    assert header == 'form-data; filename="\u20ac.txt"; name="file"'
 
 
-def test_form_data_escapes_only_cr_lf_and_quote() -> None:
+def test_form_data_escapes_only_cr_lf_quote_and_backslash() -> None:
     header = build("form-data", 'a"b\r\nc\\%41.txt', name="f")
-    assert header == 'form-data; filename="a%22b%0D%0Ac\\%41.txt"; name="f"'
+    assert header == 'form-data; filename="a%22b%0D%0Ac%5C%41.txt"; name="f"'
 
 
 @pytest.mark.parametrize(
-    "name", ["report.pdf", "€ rates.txt", 'a"b\\c.txt', "50%41.txt", "\U0001f600", ""]
+    "name", ["report.pdf", "\u20ac rates.txt", 'a"b\\c.txt', "50%41.txt", "\U0001f600", ""]
 )
 def test_built_headers_parse_back_strictly(name: str) -> None:
     parsed = parse(build("attachment", name, title=name), strict=True)
     assert parsed.filename == name
     assert parsed.params["title"] == name
+
+
+def test_form_data_escapes_a_backslash_so_the_next_parameter_survives() -> None:
+    header = build("form-data", "a\\", name="f")
+    assert header == 'form-data; filename="a%5C"; name="f"'
+    assert parse(header, strict=True).params == {"filename": "a%5C", "name": "f"}
+
+
+@pytest.mark.parametrize("name", ["\u20ac.txt", "r\u00e9sum\u00e9.pdf", "\U0001f600"])
+def test_form_data_output_parses_back_strictly(name: str) -> None:
+    assert parse(build("form-data", name, name="f"), strict=True).filename == name
+
+
+def test_a_parameter_given_twice_is_rejected() -> None:
+    with pytest.raises(ValueError, match="more than once"):
+        build("attachment", "a", **{"FILENAME": "b"})
+    with pytest.raises(ValueError, match="more than once"):
+        build("attachment", **{"a_b": "1", "a-b": "2"})
+
+
+def test_names_are_checked_before_case_folding() -> None:
+    with pytest.raises(ValueError, match="token"):
+        build("attachment", **{"\u212aey": "v"})
+    with pytest.raises(ValueError, match="token"):
+        build("\u212a")
+
+
+def test_a_non_string_type_is_rejected() -> None:
+    with pytest.raises(TypeError):
+        build(None)  # type: ignore[arg-type]

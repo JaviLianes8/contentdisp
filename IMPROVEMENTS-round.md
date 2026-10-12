@@ -10,7 +10,7 @@ Progress:
 - [x] Installed wheel e2e test
 - [x] Docs: README, CHANGELOG, docstrings, packaging metadata
 - [x] Gates: ruff format, ruff check, mypy --strict, pytest
-- [ ] Independent review findings fixed with regression tests
+- [x] Independent review findings fixed with regression tests
 - [ ] Pull request opened, guard clean
 
 ## Starting point
@@ -96,3 +96,18 @@ current specifications and the browser test corpus turned up these gaps:
   both, and the corpus checks that they are not applied.
 - A command line tool: the header is read and written inside HTTP code, and
   `curl -OJ` already saves a download under its advertised name.
+
+## Review fixes
+
+- `safe_filename` no longer leaves the extension alone (`.ab`) when the stem does not
+  fit; the leading clean-up runs again after truncation.
+- All invisible format characters (zero-width spaces, soft hyphens, byte order marks,
+  bidi controls) are removed, and leading combining marks and joiners are stripped, so
+  nothing can hide a leading dot. Joiners inside a name (emoji sequences) stay.
+- `build("form-data", ...)` escapes a backslash as `%5C`; left raw it escaped the closing
+  quote and swallowed the next parameter.
+- Strict parsing treats any non-ASCII character of a `str` as obs-text, so UTF-8
+  form-data headers decoded by the caller parse back.
+- `build` rejects a parameter given twice, checks names before case folding (KELVIN
+  SIGN no longer passes as `k`) and raises `TypeError` for a non-string type.
+- The README and docstring state that `default` is returned as given.

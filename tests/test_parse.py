@@ -20,8 +20,8 @@ def test_inline_without_parameters() -> None:
 def test_extended_filename_wins_over_plain_in_either_order() -> None:
     ext = "filename*=UTF-8''%E2%82%AC%20rates.txt"
     for header in (f'attachment; filename="EURO"; {ext}', f'attachment; {ext}; filename="EURO"'):
-        assert parse(header).filename == "€ rates.txt"
-        assert parse(header, strict=True).filename == "€ rates.txt"
+        assert parse(header).filename == "\u20ac rates.txt"
+        assert parse(header, strict=True).filename == "\u20ac rates.txt"
 
 
 def test_undecodable_extended_value_leaves_the_plain_fallback() -> None:
@@ -76,7 +76,6 @@ def test_other_argument_types_are_rejected() -> None:
         ("attachment; filename*=UTF-8''%E4", "invalid UTF-8"),
         ("attachment; filename*=ISO-8859-1''%82", "outside ISO-8859-1"),
         ('attachment; filename="a\x01"', "invalid character"),
-        ('attachment; filename="€"', "invalid character"),
         ("attachment; filename=a\r\n", "CR, LF and NUL"),
     ],
 )
@@ -129,3 +128,10 @@ def test_only_utf8_and_iso_8859_1_are_decoded(charset: str) -> None:
     header = f"attachment; filename=\"plain\"; filename*={charset}''%41%00"
     assert parse(header).filename == "plain"
     assert parse(header, strict=True).filename == "plain"
+
+
+def test_decoded_non_ascii_text_counts_as_obs_text() -> None:
+    # A str holds already-decoded text; whatever its encoding, the octets were obs-text.
+    assert parse('form-data; name="f"; filename="\u20ac.txt"', strict=True).filename == "\u20ac.txt"
+    with pytest.raises(ValueError, match="token or quoted-string"):
+        parse("attachment; filename=\u20ac.txt", strict=True)

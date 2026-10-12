@@ -10,8 +10,10 @@ from ._grammar import is_token
 
 # Appendix D of RFC 6266: some agents percent-decode "%HH" in the plain filename.
 _PERCENT_ESCAPE = re.compile(r"%(?=[0-9A-Fa-f]{2})")
-# WHATWG HTML, multipart/form-data encoding: the only escapes a browser applies.
-_FORM_DATA_ESCAPES = {"\n": "%0A", "\r": "%0D", '"': "%22"}
+# WHATWG HTML, multipart/form-data encoding: browsers escape LF, CR and DQUOTE. A
+# backslash is escaped too, as RFC 7578 4.2 allows: left raw it would escape the closing
+# quote for a quoted-string parser and swallow the next parameter.
+_FORM_DATA_ESCAPES = {"\n": "%0A", "\r": "%0D", '"': "%22", "\\": "%5C"}
 
 
 def build(type: str, filename: str | None = None, **params: str) -> str:
@@ -21,20 +23,28 @@ def build(type: str, filename: str | None = None, **params: str) -> str:
     ``\\``, ``"`` or a ``%HH`` sequence, all avoided by RFC 6266 Appendix D) a transliterated
     fallback is written first and the exact value follows as ``filename*``. For
     ``form-data`` no ``*`` parameter is written (RFC 7578 4.2): values stay UTF-8 text and
-    only CR, LF and ``"`` are percent-escaped, as browsers do. Keyword names use ``-`` for
-    ``_``. Raises ``ValueError`` for a type or name that is not a token, or a value with
-    control characters other than tab (CR and LF are escaped for ``form-data``).
+    CR, LF, ``"`` and ``\\`` are percent-escaped, as browsers do for the first three.
+    Keyword names use ``-`` for ``_``. Raises ``ValueError`` for a type or name that is not
+    a token, a name given twice (names are case-insensitive), or a value with control
+    characters other than tab (CR and LF are escaped for ``form-data``).
     """
-    disposition_type = type.strip().lower()
-    if not is_token(disposition_type):
+    if not isinstance(type, str):
+        raise TypeError(f"type must be a str, not {type.__class__.__name__}")
+    if not is_token(type.strip()):
         raise ValueError(f"disposition type must be a token: {type!r}")
+    disposition_type = type.strip().lower()
     form_data = disposition_type == "form-data"
     items = [] if filename is None else [("filename", filename)]
-    items.extend((name.replace("_", "-").lower(), value) for name, value in params.items())
+    items.extend((name.replace("_", "-"), value) for name, value in params.items())
     parts = [disposition_type]
-    for name, value in items:
-        if not is_token(name) or name.endswith("*"):
-            raise ValueError(f"parameter name must be a token without '*': {name!r}")
+    seen: set[str] = set()
+    for raw_name, value in items:
+        if not is_token(raw_name) or raw_name.endswith("*"):
+            raise ValueError(f"parameter name must be a token without '*': {raw_name!r}")
+        name = raw_name.lower()
+        if name in seen:
+            raise ValueError(f"parameter {name!r} is given more than once")
+        seen.add(name)
         if not isinstance(value, str):
             raise TypeError(f"parameter {name!r} must be a str, not {value.__class__.__name__}")
         _check_controls(name, value, allow_newlines=form_data)

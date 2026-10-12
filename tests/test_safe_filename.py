@@ -114,3 +114,25 @@ def test_a_device_name_prefix_stays_within_the_limit() -> None:
 def test_max_bytes_must_be_positive() -> None:
     with pytest.raises(ValueError):
         safe_filename("a" * 10, max_bytes=0)
+
+
+def test_truncation_never_leaves_the_extension_alone() -> None:
+    assert safe_filename("\U0001f600\U0001f600.ab", max_bytes=6) == "\U0001f600"
+
+
+@pytest.mark.parametrize("prefix", ["\ufeff", "\u200b", "\u00ad", "\u0301", "\u200d", "\u2060"])
+def test_invisible_characters_cannot_hide_a_leading_dot(prefix: str) -> None:
+    assert safe_filename(prefix + ".env") == "env"
+
+
+def test_format_characters_are_removed_but_joiners_inside_a_name_stay() -> None:
+    assert safe_filename("a\u200bb\u00adc\ufeff.txt") == "abc.txt"
+    assert safe_filename("\U0001f469\u200d\U0001f4bb.png") == "\U0001f469\u200d\U0001f4bb.png"
+
+
+def test_the_cut_without_extension_is_trimmed_again() -> None:
+    assert safe_filename("\U0001f600  .ab", max_bytes=6) == "\U0001f600"
+
+
+def test_the_default_is_returned_as_given() -> None:
+    assert safe_filename("..", default="download", max_bytes=3) == "download"

@@ -31,9 +31,10 @@ charset is ignored, so the plain `filename` is used instead.
 ## Never trust the name
 
 The file name comes from the server and is advisory. `safe_filename` keeps only the last
-path segment, removes control and text-direction characters, replaces characters Windows
-refuses, neutralises device names such as `CON`, strips leading dots and caps the length
-at 255 UTF-8 bytes, keeping the extension:
+path segment, removes control and invisible format characters (text-direction controls,
+zero-width spaces), replaces characters Windows refuses, neutralises device names such as
+`CON`, strips leading dots and caps the length at 255 UTF-8 bytes, keeping the extension.
+The `default` is returned as given when nothing usable is left:
 
 ```python
 from contentdisp import parse, safe_filename
@@ -78,9 +79,13 @@ When the plain `filename` cannot carry the name exactly (non-ASCII, `\`, `"` or 
 style sequence, all things RFC 6266 Appendix D says to avoid there), `build` writes an
 ASCII fallback first and the exact name as UTF-8 `filename*`. Accented letters fall back
 to their base letter. For `form-data` no `filename*` is written, as RFC 7578 section 4.2
-requires: the name stays UTF-8 and only CR, LF and `"` are escaped, as browsers do.
-Control characters and a type or parameter name that is not a token raise `ValueError`,
-so a header can never be split.
+requires: the name stays UTF-8, CR, LF and `"` are percent-escaped as browsers do, and so
+is a backslash, which would otherwise swallow the next parameter. Control characters, a
+type or parameter name that is not a token, and a parameter given twice raise
+`ValueError`, so a header can never be split.
+
+A multipart part header is UTF-8: decode it yourself and pass `str` to `parse`, whose
+strict mode accepts any non-ASCII character inside a quoted-string.
 
 ## API
 

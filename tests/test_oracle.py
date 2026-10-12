@@ -16,7 +16,7 @@ from contentdisp import parse
 
 TCHAR = r"[!#$%&'*+\-.^_`|~0-9A-Za-z]"
 OWS = r"[ \t]*"
-QUOTED = r'"(?:[\t !#-\[\]-~\x80-\xff]|\\[\t -~\x80-\xff])*"'
+QUOTED = r'"(?:[\t !#-\[\]-~\x80-\U0010ffff]|\\[\t -~\x80-\U0010ffff])*"'
 EXT = r"[A-Za-z0-9!#$%&+\-^_`{}~]+'[A-Za-z0-9\-]*'(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9!#$&+\-.^_`|~])*"
 PLAIN_NAME = rf"(?:{TCHAR}*[!#$%&'+\-.^_`|~0-9A-Za-z])"
 PARM = rf"(?:{PLAIN_NAME}{OWS}={OWS}(?:{TCHAR}+|{QUOTED})|{TCHAR}*\*{OWS}={OWS}{EXT})"
@@ -55,7 +55,7 @@ PIECES = [
     "\t",
     " ",
     "\xe9",
-    "€",
+    "\u20ac",
     ",",
     "\r\n",
     "a=b",

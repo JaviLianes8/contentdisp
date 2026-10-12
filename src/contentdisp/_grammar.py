@@ -30,12 +30,12 @@ def read_token(text: str, pos: int) -> tuple[str, int]:
 def _qdtext(char: str) -> bool:
     # HTAB / SP / %x21 / %x23-5B / %x5D-7E / obs-text (%x80-FF)
     code = ord(char)
-    return char in "\t " or (0x21 <= code <= 0x7E and char not in '"\\') or 0x80 <= code <= 0xFF
+    return char in "\t " or (0x21 <= code <= 0x7E and char not in '"\\') or code >= 0x80
 
 
 def _pair_char(char: str) -> bool:
     code = ord(char)
-    return char in "\t " or 0x21 <= code <= 0x7E or 0x80 <= code <= 0xFF
+    return char in "\t " or 0x21 <= code <= 0x7E or code >= 0x80
 
 
 def read_quoted(text: str, pos: int, *, strict: bool) -> tuple[str, int]:

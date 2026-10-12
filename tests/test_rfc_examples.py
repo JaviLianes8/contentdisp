@@ -21,11 +21,11 @@ from contentdisp import parse, safe_filename
 RFC6266_SECTION_5 = [
     ("Attachment; filename=example.html", "attachment", "example.html"),
     ('INLINE; FILENAME= "an example.html"', "inline", "an example.html"),
-    ("attachment; filename*= UTF-8''%e2%82%ac%20rates", "attachment", "€ rates"),
+    ("attachment; filename*= UTF-8''%e2%82%ac%20rates", "attachment", "\u20ac rates"),
     (
         "attachment; filename=\"EURO rates\"; filename*=utf-8''%e2%82%ac%20rates",
         "attachment",
-        "€ rates",
+        "\u20ac rates",
     ),
 ]
 
@@ -34,11 +34,11 @@ RFC6266_SECTION_5 = [
 RFC8187_EXAMPLES = [
     ("bar; title=Economy", "Economy"),
     ('bar; title="US-$ rates"', "US-$ rates"),
-    ("bar; title*=utf-8'en'%C2%A3%20rates", "£ rates"),
-    ("bar; title*=UTF-8''%c2%a3%20and%20%e2%82%ac%20rates", "£ and € rates"),
+    ("bar; title*=utf-8'en'%C2%A3%20rates", "\u00a3 rates"),
+    ("bar; title*=UTF-8''%c2%a3%20and%20%e2%82%ac%20rates", "\u00a3 and \u20ac rates"),
     (
         "bar; title=\"EURO exchange rates\"; title*=utf-8''%e2%82%ac%20exchange%20rates",
-        "€ exchange rates",
+        "\u20ac exchange rates",
     ),
 ]
 

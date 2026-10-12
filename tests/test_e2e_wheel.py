@@ -29,8 +29,8 @@ assert importlib.metadata.version("contentdisp") == contentdisp.__version__
 assert importlib.resources.files("contentdisp").joinpath("py.typed").is_file()
 
 header = "attachment; filename=\"EURO rates\"; filename*=utf-8''%e2%82%ac%20rates"
-assert parse(header, strict=True) == ContentDisposition("attachment", {"filename": "€ rates"})
-assert parse(b'attachment; filename="caf\xe9"').filename == "café"
+assert parse(header, strict=True) == ContentDisposition("attachment", {"filename": "\u20ac rates"})
+assert parse(b'attachment; filename="caf\xe9"').filename == "caf\u00e9"
 assert parse("attachment; filename=a; filename*=UTF-8'bad").filename == "a"
 for bad in ("attachment; filename=a; filename=b", 'attachment; filename="x', "inline; attachment"):
     try:
@@ -39,9 +39,9 @@ for bad in ("attachment; filename=a; filename=b", 'attachment; filename="x', "in
         pass
     else:
         raise AssertionError(bad)
-name = "€ \"quoted\" \\ 100%41.txt"
+name = "\u20ac \"quoted\" \\ 100%41.txt"
 assert parse(build("attachment", name), strict=True).filename == name
-assert "*" not in build("form-data", "é.txt", name="f")
+assert "*" not in build("form-data", "\u00e9.txt", name="f")
 try:
     build("attachment", "a\r\nSet-Cookie: x=1")
 except ValueError:
