@@ -8,7 +8,9 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import tarfile
 import venv
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -80,3 +82,17 @@ def test_installed_wheel_end_to_end(tmp_path: Path) -> None:
     result = _run(python, "-I", "-c", PROGRAM, cwd=work)
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "e2e ok"
+
+
+def test_distributions_ship_no_third_party_corpus(tmp_path: Path) -> None:
+    built = _run(sys.executable, "-m", "build", "--outdir", tmp_path, ROOT)
+    assert built.returncode == 0, built.stderr
+    (wheel,) = tmp_path.glob("contentdisp-*.whl")
+    (sdist,) = tmp_path.glob("contentdisp-*.tar.gz")
+    wheel_names = zipfile.ZipFile(wheel).namelist()
+    assert all(n.startswith(("contentdisp/", "contentdisp-")) for n in wheel_names), wheel_names
+    with tarfile.open(sdist) as archive:
+        names = [n.split("/", 1)[1] for n in archive.getnames() if "/" in n]
+    assert "tests/upstream/MANIFEST.json" in names
+    assert not any(n.endswith(("tc2231.html", "tc2231.json")) for n in names), names
+    assert not any(n.startswith("IMPROVEMENTS") for n in names), names
