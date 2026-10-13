@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "contentdisp"
-version = "0.2.0"
+version = "0.2.1"
 description = "Parse and build HTTP Content-Disposition headers per RFC 6266 and RFC 8187, with safe file names"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -44,7 +44,17 @@ Funding = "https://buymeacoffee.com/jlianesglrs"
 packages = ["src/contentdisp"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["IMPROVEMENTS-round.md"]
+# Third-party test files are fetched locally and never shipped; only their manifest is.
+include = [
+    "src/contentdisp",
+    "tests/*.py",
+    "tests/upstream/MANIFEST.json",
+    "scripts/fetch_upstream.py",
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]
 
 [tool.ruff]
 line-length = 100

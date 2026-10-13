@@ -7,6 +7,6 @@ from ._model import ContentDisposition
 from ._parse import parse
 from ._safe import safe_filename
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 __all__ = ["ContentDisposition", "build", "parse", "safe_filename"]

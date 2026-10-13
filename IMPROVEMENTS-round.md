@@ -52,7 +52,8 @@ current specifications and the browser test corpus turned up these gaps:
   (sha256 813277f91c6c65c9047da9e9a8f1f0c19c1fb4bb1aaeea944bcf3bbdcc2eef49). 4.2.
 - Browser test corpus (the one RFC 6266 Appendix D points to):
   http://greenbytes.de/tech/tc2231/
-  (sha256 341d2916ce946f670567f40ce570115d08873f51794aac13ad62047b7e7a6896).
+  (sha256 341d2916ce946f670567f40ce570115d08873f51794aac13ad62047b7e7a6896). Not committed:
+  `scripts/fetch_upstream.py` fetches it into `tests/upstream/`.
 
 ## Ranked improvements
 
