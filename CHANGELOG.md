@@ -6,6 +6,69 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-18
+
+The public API is now stable: the five names in `contentdisp.__all__`, their signatures,
+defaults and error types follow Semantic Versioning from this release on.
+
+### Stable
+
+- `parse` reads a header strictly (`strict=True`, the RFC 6266 grammar with RFC 9110,
+  RFC 8187 and RFC 5646 rules) or leniently (the default: the same result on every valid
+  header, recovery on the others), and returns a `ContentDisposition`.
+- `ContentDisposition` with `type`, `params`, `filename` and `is_attachment`.
+- `build` writes a header that cannot be split, following RFC 6266 Appendix D, and
+  RFC 7578 for `form-data`.
+- `safe_filename` reduces an advisory name to one safe to create in a folder.
+- `ContentDispositionError` (a `ValueError`) for invalid values, with the `position` of
+  the first offending character for strict parsing; `TypeError` for arguments of the
+  wrong type.
+
+### Changed
+
+- Every `ValueError` the library raises is now a `ContentDispositionError`, a subclass,
+  so `except ValueError` keeps working.
+- Strict parsing checks the language part of an extended value against the RFC 5646
+  grammar that RFC 8187 refers to (`UTF-8'1'a` used to pass); lenient parsing still
+  skips any language made of letters, digits and hyphens.
+- Strict error offsets count from the start of the header as given; they used to count
+  from the header without its leading spaces. Messages end with `at offset N`.
+- `is_attachment` is false for a type that is not a token, which only lenient parsing
+  produces (an empty header, `"attachment"` in quotes, a header without a type): RFC 6266
+  section 3 ignores invalid headers, and Chrome treats them as inline. It used to be
+  true. `inline` is now also recognised without case on a value built by hand.
+- Lenient parsing reads a header without a type (`filename=report.pdf`) as browsers do:
+  the text before the first `;` stays the type and is also read as a parameter.
+- `safe_filename` normalises again after removing invisible characters, so its result
+  is always NFKC and passing it again returns it unchanged (`C`, zero-width space,
+  combining acute gave `C` plus the combining accent; now `Ć`).
+- `safe_filename` checks its arguments first: `max_bytes` must be an `int` (not a `bool`)
+  of at least 1 whatever the name (`safe_filename(None, max_bytes=0)` returned the
+  default), `default` a `str` and `name` a `str` or `None`, each with a `TypeError`.
+- `ContentDisposition` refuses fields that are not `str` (`params` must be a `dict` of
+  `str` to `str`) with `TypeError`.
+- `ContentDisposition` and `ContentDispositionError` show and pickle as
+  `contentdisp.<Name>` instead of the private module; pickles made by 0.2.1 still load.
+
+### Fixed
+
+- Error messages quote at most 40 characters of any input and never an extended value;
+  a huge header, type or name used to be quoted whole.
+- Lenient parsing checks a parameter name before lower-casing it, so the Kelvin sign no
+  longer passes as `k`.
+- A strict quoted-string cut off right after a backslash is reported as unterminated, at
+  the end of the header.
+
+### Added
+
+- Runnable examples in every public docstring, run as doctests, and a GUIDE.
+- Tests against the RFC 6266, RFC 8187, RFC 9110, RFC 5646, RFC 5234 and RFC 7578 texts
+  fetched at test time (grammar rules compiled from the text), the tc2231 corpus,
+  Chromium's unit test expectations, Microsoft's file naming rules, the HTML standard's
+  form-data rule, the jshttp `content-disposition` 1.0.1 and 3.0.0 parsers run with
+  Node.js, werkzeug, aiohttp, multipart, Python's `email` and `ntpath.isreserved`, real
+  files created on Windows, and the 0.2.1 release; seeded fuzz and hostile input tests.
+
 ## [0.2.1] - 2026-10-13
 
 ### Changed
