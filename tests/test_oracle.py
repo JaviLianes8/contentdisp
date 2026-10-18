@@ -1,9 +1,10 @@
 """Strict mode against a grammar oracle on seeded random headers.
 
 The oracle below is a regular expression derived by hand from the RFC 6266 section 4.1
-ABNF, with token, quoted-string and OWS from RFC 9110 and ext-value from RFC 8187 (its
-language part simplified to letters, digits and hyphens). It is written independently of
-the parser: no code is shared.
+ABNF, with token, quoted-string and OWS from RFC 9110 and ext-value from RFC 8187, whose
+language part is checked by a walk over the RFC 5646 section 2.1 subtags written by hand.
+It is written independently of the parser: no code is shared. A name ending in "*" (even
+"*" alone) is read as an extended parameter, as the parser documents.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ import re
 from urllib.parse import unquote_to_bytes
 
 from contentdisp import parse
+from langtag_oracle import language_tag_ok
 
 TCHAR = r"[!#$%&'*+\-.^_`|~0-9A-Za-z]"
 OWS = r"[ \t]*"
@@ -58,6 +60,9 @@ PIECES = [
     "\u20ac",
     ",",
     "\r\n",
+    "UTF-8'en-US'%41",
+    "UTF-8'x-a'b",
+    "UTF-8'1'b",
     "a=b",
     '""',
     "foo.html",
@@ -67,6 +72,7 @@ PIECES = [
 
 NAMES = ["filename", "FileName", "name", "a*b", "filename*", "title*", "x"]
 VALUES = ["tok", '"a b"', '"a;b"', "UTF-8''%41", "ISO-8859-1''%85", "UTF-8''%C3", "x'y'z"]
+VALUES += ["UTF-8'de-CH-1901'%41", "utf-8'i-klingon'a", "UTF-8'en-a-bb-x-1'a", "UTF-8'en-'a"]
 
 
 def _structured(rng: random.Random) -> str:
@@ -103,7 +109,10 @@ def _without_quoted(header: str) -> str:
 
 def _ext_ok(value: str) -> bool:
     charset, _, rest = value.partition("'")
-    octets = unquote_to_bytes(rest.partition("'")[2])
+    language, _, chars = rest.partition("'")
+    if language and not language_tag_ok(language):
+        return False
+    octets = unquote_to_bytes(chars)
     if charset.lower() == "utf-8":
         try:
             octets.decode("utf-8")

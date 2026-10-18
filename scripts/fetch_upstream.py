@@ -1,13 +1,20 @@
-"""Fetch the third-party test files listed in tests/upstream/MANIFEST.json.
+"""Fetch the third-party files listed in tests/upstream/MANIFEST.json.
 
-The files are not part of the repository. Their tests skip until this script has fetched
-them; each download is checked against the size and sha256 in the manifest.
+The files (specifications, a browser test corpus, Chromium's unit test, Microsoft's file
+naming rules and two releases of the jshttp content-disposition package) are not part of
+the repository. Their tests skip until this script has fetched them; each download is
+checked against the size and sha256 in the manifest.
 
-    python scripts/fetch_upstream.py
+    python scripts/fetch_upstream.py            # fetch and verify
+    python scripts/fetch_upstream.py --update   # fetch and record the new size and sha256
+
+Every URL is pinned (published RFCs, commit snapshots, npm releases) except the tc2231
+page, which is not versioned; ``--update`` records its current state in the manifest.
 """
 
 from __future__ import annotations
 
+import datetime
 import hashlib
 import json
 import sys
@@ -15,23 +22,31 @@ import urllib.request
 from pathlib import Path
 
 FOLDER = Path(__file__).resolve().parents[1] / "tests" / "upstream"
+MANIFEST = FOLDER / "MANIFEST.json"
 
 
-def main() -> int:
-    manifest = json.loads((FOLDER / "MANIFEST.json").read_text(encoding="utf-8"))
+def main(argv: list[str]) -> int:
+    update = "--update" in argv
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     failed = 0
     for name, entry in manifest.items():
-        with urllib.request.urlopen(entry["url"], timeout=60) as response:
+        request = urllib.request.Request(entry["url"], headers={"User-Agent": "contentdisp-tests"})
+        with urllib.request.urlopen(request, timeout=300) as response:
             body = response.read()
         digest = hashlib.sha256(body).hexdigest()
         if len(body) != entry["size"] or digest != entry["sha256"]:
-            print(f"{name}: got {len(body)} bytes, sha256 {digest}; manifest differs")
-            failed += 1
-            continue
+            if not update:
+                print(f"{name}: got {len(body)} bytes, sha256 {digest}; manifest differs")
+                failed += 1
+                continue
+            entry.update(size=len(body), sha256=digest, fetched=datetime.date.today().isoformat())
+            print(f"{name}: updated")
         (FOLDER / name).write_bytes(body)
         print(f"{name}: ok")
+    if update:
+        MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return 1 if failed else 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

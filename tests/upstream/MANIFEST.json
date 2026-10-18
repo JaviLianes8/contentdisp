@@ -2,10 +2,109 @@
   "tc2231.html": {
     "title": "greenbytes tc2231 Content-Disposition test cases, Julian Reschke",
     "url": "https://greenbytes.de/tech/tc2231/",
-    "revision": "page as served on 2026-10-12 (the page is not versioned)",
-    "fetched": "2026-10-12",
+    "revision": "page as served (unversioned); unchanged since 2026-10-12",
+    "licence": "none stated (all rights reserved by the author)",
+    "fetched": "2026-10-18",
     "size": 384286,
-    "sha256": "341d2916ce946f670567f40ce570115d08873f51794aac13ad62047b7e7a6896",
-    "licence": "none stated (all rights reserved by the author)"
+    "sha256": "341d2916ce946f670567f40ce570115d08873f51794aac13ad62047b7e7a6896"
+  },
+  "rfc6266.txt": {
+    "title": "RFC 6266, Use of the Content-Disposition Header Field in HTTP",
+    "url": "https://www.rfc-editor.org/rfc/rfc6266.txt",
+    "revision": "published RFC (immutable)",
+    "licence": "IETF Trust Legal Provisions, https://trustee.ietf.org/license-info",
+    "fetched": "2026-10-18",
+    "size": 26080,
+    "sha256": "2887d464e7a2a15877aba5d54b2e8e0c06c32294c44c9d95eb8940069ab43d33"
+  },
+  "rfc8187.txt": {
+    "title": "RFC 8187, Indicating Character Encoding and Language for HTTP Header Field Parameters",
+    "url": "https://www.rfc-editor.org/rfc/rfc8187.txt",
+    "revision": "published RFC (immutable)",
+    "licence": "IETF Trust Legal Provisions, https://trustee.ietf.org/license-info",
+    "fetched": "2026-10-18",
+    "size": 28118,
+    "sha256": "af50e65257dc16a27fa85e25ef68d49c8fa2a4abc21094a00469462c8cb89b53"
+  },
+  "rfc9110.txt": {
+    "title": "RFC 9110, HTTP Semantics",
+    "url": "https://www.rfc-editor.org/rfc/rfc9110.txt",
+    "revision": "published RFC (immutable)",
+    "licence": "IETF Trust Legal Provisions, https://trustee.ietf.org/license-info",
+    "fetched": "2026-10-18",
+    "size": 502941,
+    "sha256": "21c1cdce6ab0e5509b04d84a28000836c7a087cf786efe6f04877ebfff47232a"
+  },
+  "rfc5646.txt": {
+    "title": "RFC 5646, Tags for Identifying Languages",
+    "url": "https://www.rfc-editor.org/rfc/rfc5646.txt",
+    "revision": "published RFC (immutable)",
+    "licence": "IETF Trust Legal Provisions, https://trustee.ietf.org/license-info",
+    "fetched": "2026-10-18",
+    "size": 208592,
+    "sha256": "5d9515f053163c80e7294a84d18217dc83471acc7caa9773da2ac40deeec8228"
+  },
+  "rfc5234.txt": {
+    "title": "RFC 5234, Augmented BNF for Syntax Specifications: ABNF",
+    "url": "https://www.rfc-editor.org/rfc/rfc5234.txt",
+    "revision": "published RFC (immutable)",
+    "licence": "IETF Trust Legal Provisions, https://trustee.ietf.org/license-info",
+    "fetched": "2026-10-18",
+    "size": 26359,
+    "sha256": "fc871020f53baa6b60fc6835c557b433f38d53c5cc41ab56d03622b084f53a12"
+  },
+  "rfc7578.txt": {
+    "title": "RFC 7578, Returning Values from Forms: multipart/form-data",
+    "url": "https://www.rfc-editor.org/rfc/rfc7578.txt",
+    "revision": "published RFC (immutable)",
+    "licence": "IETF Trust Legal Provisions, https://trustee.ietf.org/license-info",
+    "fetched": "2026-10-18",
+    "size": 30240,
+    "sha256": "813277f91c6c65c9047da9e9a8f1f0c19c1fb4bb1aaeea944bcf3bbdcc2eef49"
+  },
+  "whatwg-html.html": {
+    "title": "WHATWG HTML Standard (multipart/form-data encoding algorithm)",
+    "url": "https://html.spec.whatwg.org/commit-snapshots/de953a7cf0523f5873a1904ba2ce010c689dfb66/",
+    "revision": "commit de953a7cf0523f5873a1904ba2ce010c689dfb66",
+    "licence": "CC BY 4.0, https://creativecommons.org/licenses/by/4.0/",
+    "fetched": "2026-10-18",
+    "size": 15043796,
+    "sha256": "7310c7cfad31d30138f3dd8590c8ef1c9f0979fbdcccb4ba778d49790a889cf8"
+  },
+  "chromium-http_content_disposition_unittest.cc": {
+    "title": "Chromium net/http/http_content_disposition_unittest.cc",
+    "url": "https://raw.githubusercontent.com/chromium/chromium/981a92d47a81f5cb1a9ebeebd7c0d1c514a5f8d9/net/http/http_content_disposition_unittest.cc",
+    "revision": "commit 981a92d47a81f5cb1a9ebeebd7c0d1c514a5f8d9",
+    "licence": "BSD-3-Clause, https://github.com/chromium/chromium/blob/main/LICENSE",
+    "fetched": "2026-10-18",
+    "size": 28111,
+    "sha256": "47b261e283f595eca3eb881537e02c5cc57c9af450df3c8142595a598d3ec091"
+  },
+  "ms-naming-a-file.md": {
+    "title": "Microsoft Learn, Naming Files, Paths, and Namespaces (source)",
+    "url": "https://raw.githubusercontent.com/MicrosoftDocs/win32/63e70903d18b0637e62ffab6656c4a388ef0f2ce/desktop-src/FileIO/naming-a-file.md",
+    "revision": "commit 63e70903d18b0637e62ffab6656c4a388ef0f2ce",
+    "licence": "CC-BY-4.0, https://github.com/MicrosoftDocs/win32/blob/docs/LICENSE",
+    "fetched": "2026-10-18",
+    "size": 19606,
+    "sha256": "bf2485c9f36d278b7d96f947869e36247ff8c56eacda6b65124ad0418d7bdcec"
+  },
+  "content-disposition-1.0.1.tgz": {
+    "title": "npm content-disposition 1.0.1 (jshttp), the strict RFC 6266 parser of Express",
+    "url": "https://registry.npmjs.org/content-disposition/-/content-disposition-1.0.1.tgz",
+    "revision": "npm 1.0.1, integrity sha512-oIXISMynqSqm241k6kcQ5UwttDILMK4BiurCfGEREw6+X9jkkpEe5T9FZaApyLGGOnFuyMWZpdolTXMtvEJ08Q==",
+    "licence": "MIT, https://github.com/jshttp/content-disposition/blob/master/LICENSE",
+    "fetched": "2026-10-18",
+    "size": 6865,
+    "sha256": "ddd2e9efc936c376fe08d95a55fcb379c1f42dcc3dcd7a1f6ff34bdc3f782a19"
+  },
+  "content-disposition-3.0.0.tgz": {
+    "title": "npm content-disposition 3.0.0 (jshttp), its forgiving rewrite",
+    "url": "https://registry.npmjs.org/content-disposition/-/content-disposition-3.0.0.tgz",
+    "revision": "npm 3.0.0, integrity sha512-ZH/0Xs9rMIFWCOmGdmS9eHBTF62qqQYNz4nVjQhkdIO/a0fCP4UIM3mRz/wiqL0L14YgAz/1xio4OaSY4+ON/A==",
+    "licence": "MIT, https://github.com/jshttp/content-disposition/blob/master/LICENSE",
+    "fetched": "2026-10-18",
+    "size": 11715,
+    "sha256": "0eff20664803ac4c892cc0b1ef13c3b3b17bd053ef6f64825a00cea122493e1c"
   }
 }

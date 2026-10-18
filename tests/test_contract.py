@@ -6,11 +6,22 @@ import contentdisp
 
 # The public API. Add every exported name here as the library grows; this list is the
 # contract and the test below fails if the module and this list disagree.
-PUBLIC_API: list[str] = ["ContentDisposition", "build", "parse", "safe_filename"]
+PUBLIC_API: list[str] = [
+    "ContentDisposition",
+    "ContentDispositionError",
+    "build",
+    "parse",
+    "safe_filename",
+]
 
 
 def test_all_lists_exactly_the_public_api() -> None:
     assert sorted(contentdisp.__all__) == sorted(PUBLIC_API)
+
+
+def test_nothing_else_is_public_at_the_package_top() -> None:
+    public = [name for name in dir(contentdisp) if not name.startswith("_")]
+    assert sorted(public) == sorted(PUBLIC_API)
 
 
 def test_every_exported_name_resolves() -> None:
