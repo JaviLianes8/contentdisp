@@ -12,8 +12,8 @@ _RESERVED = re.compile(r'[<>:"|?*]')
 # Joiners shape emoji and some scripts; every other format character (bidi controls such
 # as U+202E, which shows "evil" + U+202E + "txt.exe" as "evilexe.txt", zero-width spaces,
 # soft hyphens, byte order marks) only hides what the name really is.
-_JOINERS = "‌‍"
-_DEVICE = re.compile(r"(con|prn|aux|nul|conin\$|conout\$|(com|lpt)[0-9¹²³])", re.I)
+_JOINERS = "\u200c\u200d"
+_DEVICE = re.compile(r"(con|prn|aux|nul|conin\$|conout\$|(com|lpt)[0-9\u00b9\u00b2\u00b3])", re.I)
 _LEADING = " .~-"
 _TRAILING = " ."
 

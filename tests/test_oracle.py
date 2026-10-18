@@ -13,8 +13,9 @@ import random
 import re
 from urllib.parse import unquote_to_bytes
 
-from contentdisp import parse
 from langtag_oracle import language_tag_ok
+
+from contentdisp import parse
 
 TCHAR = r"[!#$%&'*+\-.^_`|~0-9A-Za-z]"
 OWS = r"[ \t]*"
