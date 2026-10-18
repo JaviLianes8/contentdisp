@@ -53,7 +53,10 @@ def safe_filename(name: str | None, *, default: str = "download", max_bytes: int
         raise TypeError(f"name must be a str or None, not {type_name(name)}")
     text = unicodedata.normalize("NFKC", name)
     text = re.split(r"[/\\]", text)[-1]
-    text = _RESERVED.sub("_", "".join(_clean(char) for char in text))
+    # Removing invisible characters can leave pairs that compose ("C", U+0301): normalise
+    # again so the result is NFKC and passing it again changes nothing.
+    text = unicodedata.normalize("NFKC", "".join(_clean(char) for char in text))
+    text = _RESERVED.sub("_", text)
     text = _trim(_truncate(_trim(text), max_bytes))
     if _DEVICE.fullmatch(text.split(".", 1)[0].rstrip(" ")):
         text = "_" + _truncate(text, max_bytes - 1)

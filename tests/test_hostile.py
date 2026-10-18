@@ -1,0 +1,119 @@
+"""Huge and adversarial input: linear time, no crash, short messages (hand-written shapes)."""
+
+from __future__ import annotations
+
+import time
+from collections.abc import Callable
+
+import pytest
+
+from contentdisp import ContentDispositionError, build, parse, safe_filename
+
+UNIT = 40_000
+
+
+def _seconds(work: Callable[[], object]) -> float:
+    best = float("inf")
+    for _ in range(3):
+        start = time.perf_counter()
+        work()
+        best = min(best, time.perf_counter() - start)
+    return best
+
+
+def _linear(make: Callable[[int], Callable[[], object]]) -> None:
+    """Four times the input may take at most about four times as long (with slack)."""
+    small = _seconds(make(UNIT))
+    large = _seconds(make(4 * UNIT))
+    assert large < 10 * max(small, 0.002) + 0.05, (small, large)
+
+
+HEADERS: dict[str, Callable[[int], str]] = {
+    "params": lambda n: "a" + ";x=1" * (n // 4),
+    "distinct params": lambda n: "a" + "".join(f";n{i}=v" for i in range(n // 8)),
+    "semicolons": lambda n: "a" + ";" * n,
+    "open quote": lambda n: 'a;x="' + "\\" * n,
+    "escapes": lambda n: 'a;x="' + '\\"' * (n // 2) + '"',
+    "quotes": lambda n: "a;x=" + '"' * n,
+    "equals": lambda n: "a;x" + "=" * n,
+    "whitespace": lambda n: " " * n + "a" + "\t" * n,
+    "long token": lambda n: "a;x=" + "b" * n,
+    "long quoted": lambda n: 'a;x="' + "\xe9" * n + '"',
+    "long extended value": lambda n: "a;x*=UTF-8''" + "%41" * (n // 3),
+    "broken language": lambda n: "a;x*=UTF-8'" + "a-" * (n // 2) + "'b",
+    "variants": lambda n: "a;x*=UTF-8'en" + "-abcde" * (n // 6) + "'b",
+    "extensions": lambda n: "a;x*=UTF-8'en-a" + "-bb" * (n // 3) + "'b",
+    "private use": lambda n: "a;x*=UTF-8'x" + "-a" * (n // 2) + "'b",
+    "type only": lambda n: "a" * n,
+    "controls": lambda n: "a;x=" + "\r\n" * (n // 2),
+}
+
+
+@pytest.mark.parametrize("shape", sorted(HEADERS))
+@pytest.mark.parametrize("strict", [False, True])
+def test_parsing_time_grows_linearly(shape: str, strict: bool) -> None:
+    def make(n: int) -> Callable[[], object]:
+        text = HEADERS[shape](n)
+
+        def work() -> None:
+            try:
+                parse(text, strict=strict)
+            except ContentDispositionError as error:
+                assert len(str(error)) < 200
+
+        return work
+
+    _linear(make)
+
+
+BUILDS: dict[str, Callable[[int], Callable[[], object]]] = {
+    "long name": lambda n: lambda: build("attachment", "\u20ac" * n),
+    "percent signs": lambda n: lambda: build("attachment", "%41" * (n // 3)),
+    "form-data": lambda n: lambda: build("form-data", '"\r\n\\' * (n // 4), name="f"),
+    "many params": lambda n: lambda: build("attachment", **{f"p{i}": "v" for i in range(n // 20)}),
+}
+
+
+@pytest.mark.parametrize("shape", sorted(BUILDS))
+def test_building_time_grows_linearly(shape: str) -> None:
+    _linear(BUILDS[shape])
+
+
+NAMES: dict[str, Callable[[int], str]] = {
+    "plain": lambda n: "a" * n + ".txt",
+    "separators": lambda n: "a/" * (n // 2),
+    "leading marks": lambda n: "\u0301" * n + "a",
+    "leading dots": lambda n: ". " * (n // 2) + "a",
+    "invisible": lambda n: "\u200b" * n + "a",
+    "expanding": lambda n: "\ufdfa" * (n // 18),
+    "joiners": lambda n: "\u200d" * n + ".env",
+}
+
+
+@pytest.mark.parametrize("shape", sorted(NAMES))
+def test_safe_filename_time_grows_linearly(shape: str) -> None:
+    _linear(lambda n: lambda: safe_filename(NAMES[shape](n)))
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda big: build("a b" + big),
+        lambda big: build("attachment", **{big: "1", big.upper(): "2"}),
+        lambda big: build("attachment", big + "\x00"),
+        lambda big: build("attachment", **{big + "*": "x"}),
+        lambda big: parse(f"a; {big}=1; {big}=2", strict=True),
+        lambda big: parse(f"a; x*=UTF-8''{big}%", strict=True),
+        lambda big: parse(f'a; x="{big}', strict=True),
+    ],
+)
+def test_huge_input_never_reaches_a_message_whole(call: Callable[[str], object]) -> None:
+    with pytest.raises(ContentDispositionError) as caught:
+        call("q" * 1_000_000)
+    assert len(str(caught.value)) < 200 and "q" * 41 not in str(caught.value)
+
+
+def test_a_four_megabyte_header_is_read_in_both_modes() -> None:
+    text = "attachment; filename*=UTF-8''" + "%E2%82%AC" * 450_000
+    assert parse(text, strict=True).filename == "\u20ac" * 450_000
+    assert parse(text.encode("ascii")).filename == "\u20ac" * 450_000
