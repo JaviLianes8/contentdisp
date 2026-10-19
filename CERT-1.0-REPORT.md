@@ -14,7 +14,7 @@ Progress:
 - [x] Packaging, e2e and upgrade from PyPI 0.2.1, every Python (items 8, 10, 13, 14)
 - [x] Author mutation round (item 18)
 - [x] Gates (item 15)
-- [ ] Five QA lenses report PASS (item 19)
+- [ ] Five QA lenses report PASS (item 19): round 1 findings fixed, re-verification pending
 - [ ] Independent reviewer reports PASS (item 16)
 - [x] PR #4 opened, trace guard CLEAN (item 17); merge and publish left to the maintainer
 
@@ -22,7 +22,7 @@ Progress:
 
 | # | Item | Result |
 | --- | --- | --- |
-| 1 | Public API reviewed for stability | PASS: the five names of 0.2.1 kept with their signatures and parameter names, pinned by `tests/test_contract_api.py`; one name added (`ContentDispositionError`); every behaviour change in the CHANGELOG and the GUIDE, each checked against 0.2.1 |
+| 1 | Public API reviewed for stability | PASS: the five names of 0.2.1 kept, signatures pinned by `tests/test_contract_api.py`; one name added (`ContentDispositionError`); `build` takes its type positional only and also a `ContentDisposition` (QA round 1, finding A1); every behaviour change in the CHANGELOG and the GUIDE, each checked against 0.2.1 |
 | 2 | `__all__` exact, no private imports in docs | PASS |
 | 3 | Docstrings with runnable examples, doctests | PASS: 26 doctest examples in 7 docstrings; README and GUIDE examples run as tests with their printed output |
 | 4 | Typed end to end | PASS: `mypy --strict src tests`, `py.typed` shipped, types inferred from a consumer checked by `tests/test_typing.py` |
@@ -45,9 +45,11 @@ Progress:
 ## API review (item 1)
 
 Kept: `parse(header, *, strict=False)`, `ContentDisposition(type, params)` with
-`filename` and `is_attachment`, `build(type, filename=None, **params)` and
-`safe_filename(name, *, default="download", max_bytes=255)`, with the parameter names
-and defaults of 0.2.1. Added: `ContentDispositionError`, a `ValueError` subclass, so
+`filename` and `is_attachment`, and `safe_filename(name, *, default="download",
+max_bytes=255)`, with the parameter names and defaults of 0.2.1. Changed in QA round 1:
+`build(type, /, filename=None, **params)` takes its type positional only (so `type` can
+be a keyword parameter) and accepts a `ContentDisposition` in its place, written with
+its names as they are, so `build(parse(header))` writes any parsed header again. Added: `ContentDispositionError`, a `ValueError` subclass, so
 `except ValueError` keeps working. Changed, all in the CHANGELOG with a test against
 0.2.1 (`tests/test_upgrade.py`): strict language tags (RFC 5646), strict offsets counted
 from the start of the header, `is_attachment` false for a type that is not a token,
@@ -97,7 +99,7 @@ b81458e. The table is in [CERT-1.0-MUTANTS.md](https://github.com/JaviLianes8/co
 ## Packaging, e2e and Pythons (items 8, 10, 13, 14)
 
 - `tests/test_e2e_wheel.py` (`CONTENTDISP_E2E=1`, `CONTENTDISP_E2E_PYPI=1`): builds the
-  wheel and sdist; the wheel holds exactly the nine modules, `py.typed`, LICENSE and its
+  wheel and sdist; the wheel holds exactly the modules (ten since QA round 1), `py.typed`, LICENSE and its
   metadata (1.0.0, Production/Stable, Python 3.14 classifier, project URLs, no runtime
   requirement); the sdist holds the sources, tests, MANIFEST and docs, no fetched file,
   no report, no scripts but the two the tests use; the wheel installed in a fresh venv is
@@ -122,7 +124,47 @@ no skip) all exit 0.
 
 ## QA lenses (item 19)
 
-Pending.
+### Round 1 (lenses a, b, c and e at 6937470)
+
+Lens b (ground truth) also reported everything else it re-derived as matching: the 89
+tc2231 responses, the RFC 6266 and RFC 8187 examples, RFC 5646 Appendix A, an
+independent ABNF oracle over 90,000 headers, error positions, Chromium's expectations,
+built headers read by an oracle and by jshttp, and `safe_filename` on the real Windows
+file system. Lens c (adversarial) ran 1.62 million fuzz cases without a failure besides
+its finding. Every finding below is fixed in e1284bd (tests in b653a6a adjusted for the
+documented change); none is disputed.
+
+| Id | Finding | What changed |
+| --- | --- | --- |
+| a/A1 | `build` could not write `type` (it clashed with the first argument) nor a name with `_` | `type` is positional only; `build` also takes a `ContentDisposition`, written with its names as they are, so `build(parse(header))` writes any parsed header again. Tests: `tests/test_build_params.py`; signature pin updated; CHANGELOG Changed |
+| a/A2 | CHANGELOG had no Added entry for `ContentDispositionError` and implied it existed before | Added entry; the pickling bullet names only `ContentDisposition` |
+| a/A3 | CHANGELOG said the RFC texts are fetched at test time | Now says they are fetched by `scripts/fetch_upstream.py` |
+| a/A4 | `parse` docstring: lenient type is the text before the first `;` | Now "the first `;` outside quotes" |
+| a/A5 | A lone surrogate was reported as a control character | Message says `a lone surrogate`; test pins both messages; CHANGELOG Changed |
+| a/A6 | CONTRIBUTING contradicted the tests (no real disk or subprocess; only tc2231 fetched) | Rewritten: every fetched source, the optional tools and the tests that touch real files and subprocesses |
+| b/F1 | A bare `*` was read as an extended name (RFC 6266 ext-token is a token followed by `*`) | `*` alone is an ordinary name in both modes and in `build`; `**` is its extended form. Contract tests in `tests/test_grammar_edges.py` and `tests/test_build_params.py` failed first; the regex oracle in `tests/test_oracle.py` and the 0.2.1 comparison follow the rule; GUIDE and CHANGELOG |
+| c/F1 | `safe_filename` and `build` were quadratic on runs of combining marks | New `_unicode.normalize` cuts every run of non-starters, counted on the decomposition, to 30 (UAX #15 Stream-Safe) before normalising. Linear-time tests for alternating classes, U+0F73 and runs split by invisible characters, all failing before. On Elena's PC (Python 3.14.2): 1M characters now take 0.17 to 0.23 s in `safe_filename` and 0.31 to 0.40 s in `build` (lens c measured 1.3 s for 64k before) |
+| e/F1 | Language-tag mutants L03, L05, L07, L09 survived | `tests/test_grammar_edges.py`: every grandfathered tag, 0 to 3 extlangs and 4 refused, 2-digit region refused, 4, 5 and 8-letter language and 9 refused, extension subtags of 1 and 9 characters refused |
+| e/F2 | Extension budget mutant S05 survived | 16-byte extension kept and 17 dropped; half of a small budget |
+| e/F3 | `show` never raising was not pinned (E05) | A key or value whose `__repr__` raises gives the `TypeError` with `<_BadRepr>` |
+| e/F4 | P16, G01, G02, X08, L06, B13 bit only with fetched files | Self-contained tests: the exact tchar set (every printable ASCII character), lenient unquoted spaces, empty charset, extension subtag length, NFKD transliteration of U+FB01 |
+
+Mutants re-run after the fixes, each alone, against only the tests that need no fetched
+file (on Elena's PC, fresh copy): L03, L05, L06, L07, L09, S05, E05, P16, G01, G02 and
+X08 are killed, and so are two new ones (the bare `*` check removed, the mark-run cut
+removed). B13 as written (NFKD to NFD in `ascii_fallback`) is now equivalent, because
+the bounded normaliser already decomposes each character with NFKD; flipping both NFKD
+uses is killed by `test_the_fallback_transliterates_compatibility_characters`.
+
+Gates on Elena's PC (Python 3.14.2) from a clone of the branch, each on its own:
+`ruff format --check .`, `ruff check .`, `mypy --strict src`, `mypy --strict src tests`
+and `pytest` all exit 0, at e1284bd without fetched files (573 passed, 71 skipped) and at
+b653a6a with them (620 passed, 24 skipped). At b653a6a with the fetched sources, Node.js,
+werkzeug, aiohttp, multipart, the 0.2.1 oracle, `CONTENTDISP_E2E=1` and
+`CONTENTDISP_E2E_PYPI=1`: 644 passed, no skip (the first run of this at e1284bd found the
+0.2.1 comparison still expecting the old bare `*` reading, fixed in b653a6a).
+
+Re-verification by the same lenses: pending.
 
 ## Independent review (item 16)
 
