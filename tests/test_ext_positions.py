@@ -54,6 +54,10 @@ CASES = [
     ("attachment; filename*=UTF-8'aa-a0", "malformed extended value", 33),
     ("attachment; filename*=UTF-8'en-a-", "malformed extended value", 33),
     ("attachment; filename*=UTF-8'en-a0)", "malformed extended value", 33),
+    # A start ending in a full 8-character subtag: only a tag with nothing more continues it.
+    ("attachment; filename*=UTF-8'abcdefgh", "malformed extended value", 36),
+    ("attachment; filename*=UTF-8'x-abcdefgh", "malformed extended value", 38),
+    ("attachment; filename*=UTF-8'en-abcdefgh", "malformed extended value", 39),
     # A later error in a well-formed tag's value keeps its own position.
     ("attachment; filename*=UTF-8'en'%G0", "malformed extended value", 32),
     # Octets invalid in their charset: the start of the value.

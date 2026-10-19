@@ -14,7 +14,7 @@ Progress:
 - [x] Packaging, e2e and upgrade from PyPI 0.2.1, every Python (items 8, 10, 13, 14)
 - [x] Author mutation round (item 18)
 - [x] Gates (item 15)
-- [ ] Five QA lenses report PASS (item 19): rounds 1 to 9 findings fixed, re-verification pending
+- [ ] Five QA lenses report PASS (item 19): rounds 1 to 10 findings fixed, re-verification pending
 - [ ] Independent reviewer reports PASS (item 16)
 - [x] PR #4 opened, trace guard CLEAN (item 17); merge and publish left to the maintainer
 
@@ -426,6 +426,26 @@ a fill of more than 4).
 Gates: see Gates (ec54768, 852 passed, no skip).
 
 Re-verification of round 9 by lens e: pending.
+
+### Round 10 (lens e at cc69879)
+
+Lens e found its two round 9 findings (N6-E1, N6-E2) resolved: the repros give the
+expected results and mutants L2, L3, L5 and L7 are killed by the default suite, with the
+BASE run green. Its sweep of 10 new mutants killed 7; of the 3 others, S1 (fill `x0`),
+S3 (tail `-a0`) and S4 (tail `-aaa`) were shown equivalent over 624,692 differential
+inputs. One new gap was reported, not disputed: no behaviour was wrong, so the new cases
+pass on cc69879 and were checked against the mutant instead.
+
+| Id | Finding | What changed |
+| --- | --- | --- |
+| e/N7-E1 | The empty fill of `_ENDINGS` was not pinned (mutant S2, `range(1, 9)`): a start that ends in a full 8-character subtag, which nothing can extend, was reported as a malformed tag | `UTF-8'abcdefgh` (`malformed extended value` at 36, as asked), `UTF-8'x-abcdefgh` (at 38, as asked) and `UTF-8'en-abcdefgh` (at 39) added to `tests/test_ext_positions.py` |
+
+S2 run on this PC against `tests/test_ext_positions.py` alone: killed, by each of the three
+new cases (S2 reports `malformed language tag` one character earlier). The original passes.
+
+Gates: see Gates.
+
+Re-verification of round 10 by lens e: pending.
 
 ## Independent review (item 16)
 
