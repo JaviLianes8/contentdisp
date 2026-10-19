@@ -149,10 +149,10 @@ that commit fails it.
 
 ## Gates (item 15)
 
-Latest run at ec54768 on Elena's PC (Python 3.14.2) from a fresh clone, each command on
+Latest run at 47b6ae1 on Elena's PC (Python 3.14.2) from a fresh clone, each command on
 its own, with the fetched sources, Node.js, werkzeug, aiohttp, multipart, the 0.2.1
 oracle, `CONTENTDISP_E2E=1` and `CONTENTDISP_E2E_PYPI=1`: `ruff format --check .`,
-`ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` (852 passed,
+`ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` (855 passed,
 no skip) all exit 0. Earlier runs after each QA round are listed with that round below.
 
 ## QA lenses (item 19)
@@ -443,7 +443,7 @@ pass on cc69879 and were checked against the mutant instead.
 S2 run on this PC against `tests/test_ext_positions.py` alone: killed, by each of the three
 new cases (S2 reports `malformed language tag` one character earlier). The original passes.
 
-Gates: see Gates.
+Gates: see Gates (47b6ae1, 855 passed, no skip).
 
 Re-verification of round 10 by lens e: pending.
 
