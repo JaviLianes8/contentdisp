@@ -14,8 +14,8 @@ Progress:
 - [x] Packaging, e2e and upgrade from PyPI 0.2.1, every Python (items 8, 10, 13, 14)
 - [x] Author mutation round (item 18)
 - [x] Gates (item 15)
-- [ ] Five QA lenses report PASS (item 19): rounds 1 to 10 findings fixed, re-verification pending
-- [ ] Independent reviewer reports PASS (item 16)
+- [x] Five QA lenses report PASS (item 19): rounds 1 to 10 findings fixed and re-verified
+- [x] Independent reviewer reports PASS (item 16)
 - [x] PR #4 opened, trace guard CLEAN (item 17); merge and publish left to the maintainer
 
 ## Scorecard
@@ -37,10 +37,10 @@ Progress:
 | 13 | pyproject 1.0.0, Production/Stable | PASS |
 | 14 | sdist and wheel contents | PASS |
 | 15 | Gates each exit 0 | PASS: see Gates |
-| 16 | Independent reviewer | pending |
+| 16 | Independent reviewer | PASS: round 1 at 787adb6, every item PASS (see Independent review) |
 | 17 | PR and trace guard | PR #4 from `release/1.0.0`, trace guard CLEAN; merge and publish left to the maintainer |
 | 18 | Contracts bite (mutations) | PASS: 24 author mutants, 23 killed at once, the survivor killed by a contract added in b81458e |
-| 19 | Five independent QA lenses | pending |
+| 19 | Five independent QA lenses | PASS: all five lenses report PASS (see QA verdicts) |
 
 ## API review (item 1)
 
@@ -156,6 +156,24 @@ oracle, `CONTENTDISP_E2E=1` and `CONTENTDISP_E2E_PYPI=1`: `ruff format --check .
 no skip) all exit 0. Earlier runs after each QA round are listed with that round below.
 
 ## QA lenses (item 19)
+
+### QA verdicts
+
+Each lens ran on its own clone and reported back only. The report paths are relative to
+the local certification folder `contentdisp-cert`, which is not part of the repository.
+A lens round is counted per lens; the numbered rounds below are the fix rounds.
+
+| Lens | Lens rounds | Final verdict | Report | Commit |
+| --- | --- | --- | --- | --- |
+| a. API and docs | 3 | PASS | `lens-a-r3/REPORT.md` | 5ae5f73 |
+| b. Correctness and ground truth | 4 | PASS | `lens-b-r4/REPORT.md` | df599e5 |
+| c. Adversarial and robustness | 3 | PASS | `lens-c-r3/r3b/sweep.out` | 5ae5f73 |
+| d. Packaging and real e2e | 2 | PASS | `lens-d-r2/REPORT.md` | 4cf885f |
+| e. Contract strength | 6 | PASS | `lens-e-r6/REPORT.md` | 787adb6 |
+
+Every finding of every lens is fixed and was re-checked by the lens that raised it. The
+code changed after a lens's final commit was covered by the later lenses, the independent
+review and the final gates, all at 787adb6 or later.
 
 ### Round 1 (lenses a, b, c and e at 6937470)
 
@@ -402,7 +420,7 @@ and the unclosed check turned off are killed.
 
 Gates: see Gates (d062331, 848 passed, no skip).
 
-Re-verification of round 8 by the same lenses: pending.
+Re-verification of round 8 by the same lenses: lens e in round 9, lens b in its round 4 at df599e5 (PASS).
 
 ### Round 9 (lens e at df599e5)
 
@@ -425,7 +443,7 @@ a fill of more than 4).
 
 Gates: see Gates (ec54768, 852 passed, no skip).
 
-Re-verification of round 9 by lens e: pending.
+Re-verification of round 9 by lens e: done in round 10.
 
 ### Round 10 (lens e at cc69879)
 
@@ -445,8 +463,56 @@ new cases (S2 reports `malformed language tag` one character earlier). The origi
 
 Gates: see Gates (47b6ae1, 855 passed, no skip).
 
-Re-verification of round 10 by lens e: pending.
+Re-verification of round 10 by lens e: its round 6 at 787adb6 (PASS, see QA verdicts).
 
 ## Independent review (item 16)
 
-Pending.
+Round 1 at 787adb6 by a fresh reviewer, reporting back only: every item PASS, no finding.
+The reviewer ran a fresh clone from GitHub on Elena's PC (Python 3.14) under a machine
+turn, with the fetched sources, Node.js, werkzeug, aiohttp, multipart, the 0.2.1 oracle,
+`CONTENTDISP_E2E=1` and `CONTENTDISP_E2E_PYPI=1`: `pytest` 855 passed, no skip;
+`python -m build` built the sdist and the wheel; `twine check --strict` PASSED on both. Its
+own mutation round of 16 mutants (X01 to X16, each alone on the full suite) killed all 16.
+Evidence logs in the local certification folder: `review-r1/out/pytest.log`,
+`review-r1/out/build.log`, `review-r1/mut/mut.log`.
+
+| # | Item | Reviewer |
+| --- | --- | --- |
+| 1 | Public API reviewed for stability | PASS |
+| 2 | `__all__` exact, no private imports in docs | PASS |
+| 3 | Docstrings with runnable examples, doctests | PASS |
+| 4 | Typed end to end | PASS |
+| 5 | Typed, documented, bounded errors | PASS |
+| 6 | Contract tests of every public name | PASS |
+| 7 | Real ground truth | PASS |
+| 8 | Real e2e from the wheel | PASS |
+| 9 | Seeded fuzz, no crash, hang or blowup | PASS |
+| 10 | Supported Pythons | PASS |
+| 11 | README and `twine check` | PASS |
+| 12 | Dated CHANGELOG section | PASS |
+| 13 | pyproject 1.0.0, Production/Stable | PASS |
+| 14 | sdist and wheel contents | PASS |
+| 15 | Gates each exit 0 | PASS |
+| 16 | Independent reviewer | PASS |
+| 17 | PR and trace guard | PASS |
+| 18 | Contracts bite (mutations) | PASS |
+| 19 | Five independent QA lenses | PASS |
+
+| Mutant | Change | Killed by |
+| --- | --- | --- |
+| X01 | quoted-pair drops HTAB | `test_parse.py::test_strict_mode_rejects_a_quoted_pair_of_a_control_character` |
+| X02 | bare `*` read as an extended name | `test_build_params.py::test_a_parsed_header_is_rebuilt_from_its_value` |
+| X03 | OWS without HTAB | `test_chromium_corpus.py::test_file_names_of_the_filename_table` |
+| X04 | ZWJ removed | `test_safe_filename.py::test_format_characters_are_removed_but_joiners_inside_a_name_stay` |
+| X05 | trailing dots kept | `test_fuzz.py::test_safe_names_keep_every_promise` |
+| X06 | extension budget | `test_safe_filename.py::test_truncation_never_splits_a_character_or_leaves_a_trailing_dot` |
+| X07 | device stem taken after the last dot | `test_docs.py::test_every_guide_example_runs_and_prints_its_comment` |
+| X08 | a type that is not a token is an attachment | doctest `contentdisp.ContentDisposition.is_attachment` |
+| X09 | strict mode: no OWS after `=` | `test_browser_corpus.py::test_strict_mode_rejects_exactly_what_the_corpus_marks_invalid` |
+| X10 | backslash escapes outside quotes | `test_lenient.py::test_a_backslash_outside_quotes_never_hides_the_next_semicolon` |
+| X11 | CR LF allowed outside form-data | `test_build.py::test_control_characters_are_rejected` |
+| X12 | extended names accepted by `build` | `test_build.py::test_parameter_names_must_be_tokens` |
+| X13 | C1 controls allowed in an extended value | `test_browser_corpus.py::test_strict_mode_rejects_exactly_what_the_corpus_marks_invalid` |
+| X14 | broken pct-encoding position | `test_ext_positions.py::test_strict_errors_point_at_the_character_that_breaks_the_grammar` |
+| X15 | message limit 41 | `test_hostile.py::test_huge_input_never_reaches_a_message_whole` |
+| X16 | fallback keeps a backslash | `test_build.py::test_characters_appendix_d_avoids_move_to_the_extended_form` |
