@@ -29,8 +29,8 @@ def safe_filename(name: str | None, *, default: str = "download", max_bytes: int
     characters become ``_``. Leading dots, tildes, hyphens, spaces and combining marks
     and trailing dots and spaces go; Windows device names such as ``CON`` or ``com1.txt``
     get a ``_`` prefix; the result is cut to ``max_bytes`` of UTF-8, keeping a short
-    extension. ``default`` is returned, as given, when nothing usable is left (``None``,
-    ``..``, ``/``). ``TypeError`` for arguments of the wrong type, and
+    extension. ``default`` is returned unchanged (a plain ``str``) when nothing usable is
+    left (``None``, ``..``, ``/``). ``TypeError`` for arguments of the wrong type, and
     ``ContentDispositionError`` when ``max_bytes`` is below 1, whatever the name.
 
     >>> from contentdisp import safe_filename
@@ -49,6 +49,7 @@ def safe_filename(name: str | None, *, default: str = "download", max_bytes: int
         raise ContentDispositionError("max_bytes must be at least 1")
     if not isinstance(default, str):
         raise TypeError(f"default must be a str, not {type_name(default)}")
+    default = str.__str__(default)
     if name is None:
         return default
     if not isinstance(name, str):

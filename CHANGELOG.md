@@ -19,7 +19,8 @@ defaults and error types follow Semantic Versioning from this release on.
 - `ContentDisposition` with `type`, `params`, `filename` and `is_attachment`.
 - `build` writes a header that cannot be split, following RFC 6266 Appendix D, and
   RFC 7578 for `form-data`; given a `ContentDisposition`, it writes that value again,
-  unless its type is not a token or a value holds a control character.
+  unless its type is not a token or a value holds a control character or a lone
+  surrogate.
 - `safe_filename` reduces an advisory name to one safe to create in a folder.
 - `ContentDispositionError` (a `ValueError`) for invalid values, with the `position` of
   the first offending character for strict parsing; `TypeError` for arguments of the
@@ -33,7 +34,8 @@ defaults and error types follow Semantic Versioning from this release on.
   parameters with their names as they are, so a parsed header is written again with
   `build(parse(header))`, names with `_` included (keywords still turn `_` into `-`).
   Headers whose type is not a token (lenient parsing only) or whose values hold a
-  control character (a C1 control is legal obs-text for strict parsing) are refused
+  control character (a C1 control is legal obs-text for strict parsing) or a lone
+  surrogate (a `str` header can carry one, and parsing takes it as obs-text) are refused
   with `ContentDispositionError`. A parameter name of a `ContentDisposition` that is
   not a `str` raises `TypeError`.
 - A parameter named `*` alone is an ordinary parameter, as RFC 6266 defines an extended
@@ -49,7 +51,8 @@ defaults and error types follow Semantic Versioning from this release on.
 - `safe_filename` and `build` work on a plain copy of a `str` subclass, so overriding
   `isascii` or `__iter__` can no longer skip normalisation (full-width slashes then
   survived the split) or hide a control character. `safe_filename` always returns a
-  plain `str`.
+  plain `str`, `default` included (a `str` subclass given as `default` used to come
+  back as that subclass).
 - Every `ValueError` the library raises is now a `ContentDispositionError`, a subclass,
   so `except ValueError` keeps working.
 - Strict parsing checks the language part of an extended value against the RFC 5646

@@ -107,10 +107,12 @@ first. The type is positional only, so `type` itself can be a keyword parameter.
 In place of the type, `build` takes a `ContentDisposition`: its type and parameters are
 written first, names as they are (lower-cased), then `filename` and the keywords. This
 writes a parsed header again, `build(parse(header))`, and reaches the names a keyword
-cannot spell, such as `x_y` or `*`. Two kinds of parsed header cannot be written again,
-and `build` refuses them with `ContentDispositionError`: a type that is not a token,
-which only lenient parsing returns, and a value holding a control character, such as a
-C1 control (U+0080 to U+009F), which RFC 9110 obs-text lets into a quoted-string.
+cannot spell, such as `x_y` or `*`. Three kinds of parsed header cannot be written
+again, and `build` refuses them with `ContentDispositionError`: a type that is not a
+token, which only lenient parsing returns; a value holding a control character, such as a
+C1 control (U+0080 to U+009F), which RFC 9110 obs-text lets into a quoted-string; and a
+value holding a lone surrogate (U+D800 to U+DFFF), which a `str` can carry and parsing
+takes as obs-text like any other character above U+00FF.
 
 Following RFC 6266 Appendix D, when the plain form cannot carry a value faithfully
 (non-ASCII, a `\` or `"`, or a `%` followed by two hex digits, which some agents decode)
@@ -171,8 +173,8 @@ print(build(parse("Attachment; x_y=1; type=2")))
    `LPT0`-`LPT9`, with superscript digits too), with or without an extension, gets a `_`
    in front.
 
-When nothing usable is left, `default` is returned as given, unchecked. Otherwise the
-result is a fixed point: passing it again returns it unchanged. `max_bytes` must be an
+When nothing usable is left, `default` is returned unchecked, as a plain `str`. Otherwise
+the result is a fixed point: passing it again returns it unchanged. `max_bytes` must be an
 `int` of at least 1 (`TypeError`, `ContentDispositionError`), checked whatever the name.
 
 ```python

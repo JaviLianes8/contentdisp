@@ -28,8 +28,9 @@ def build(type: str | ContentDisposition, /, filename: str | None = None, **para
     type and parameters are written, names as they are (lower-cased), before ``filename``
     and the keywords: ``build(parse(header))`` writes a parsed header again, unless the
     type is not a token or a value holds a control character (a C1 control is legal
-    obs-text in a quoted-string), which ``build`` refuses. A name with ``_`` or one that
-    is not a Python identifier can be written this way.
+    obs-text in a quoted-string) or a lone surrogate (parsing a ``str`` takes it as
+    obs-text), which ``build`` refuses. A name with ``_`` or one that is not a Python
+    identifier can be written this way.
 
     When the ASCII ``filename="..."`` form cannot carry a value faithfully (non-ASCII,
     ``\\``, ``"`` or a ``%HH`` sequence, all avoided by RFC 6266 Appendix D) a
