@@ -12,14 +12,16 @@ Some tests compare the library with third-party material that is not committed: 
 RFC texts, the tc2231 browser corpus, Chromium's test expectations, the HTML standard,
 Microsoft's naming rules and the jshttp npm tarballs, all listed with their URL and
 SHA-256 in `tests/upstream/MANIFEST.json`. Fetch them with
-`python scripts/fetch_upstream.py`; until then those tests skip. The tests never reach
-the network themselves.
+`python scripts/fetch_upstream.py`; until then those tests skip. The tests that read
+these files never reach the network themselves.
 
 Other tests need optional tools and skip without them: Node.js for the jshttp parsers,
 werkzeug 3.1.9, aiohttp 3.14.5 and multipart 2.0.1 for the Python oracles,
 `CONTENTDISP_V021` (a folder holding the unpacked 0.2.1 wheel) for the upgrade
 comparison, and `CONTENTDISP_E2E=1`
-(plus `CONTENTDISP_E2E_PYPI=1`) to build the wheel and test the installed package.
+(plus `CONTENTDISP_E2E_PYPI=1`) to build the wheel and test the installed package. These
+opt-in e2e tests use the network: `python -m build` downloads the build backend from
+PyPI, and `CONTENTDISP_E2E_PYPI=1` installs contentdisp 0.2.1 from PyPI.
 
 ## Before you open a pull request
 

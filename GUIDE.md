@@ -107,7 +107,10 @@ first. The type is positional only, so `type` itself can be a keyword parameter.
 In place of the type, `build` takes a `ContentDisposition`: its type and parameters are
 written first, names as they are (lower-cased), then `filename` and the keywords. This
 writes a parsed header again, `build(parse(header))`, and reaches the names a keyword
-cannot spell, such as `x_y` or `*`.
+cannot spell, such as `x_y` or `*`. Two kinds of parsed header cannot be written again,
+and `build` refuses them with `ContentDispositionError`: a type that is not a token,
+which only lenient parsing returns, and a value holding a control character, such as a
+C1 control (U+0080 to U+009F), which RFC 9110 obs-text lets into a quoted-string.
 
 Following RFC 6266 Appendix D, when the plain form cannot carry a value faithfully
 (non-ASCII, a `\` or `"`, or a `%` followed by two hex digits, which some agents decode)
@@ -147,9 +150,12 @@ print(build(parse("Attachment; x_y=1; type=2")))
 `safe_filename(name, *, default="download", max_bytes=255)` applies the rules of RFC
 6266 section 4.3 and Microsoft's file naming rules, in this order:
 
-1. NFKC normalisation, so full-width slashes and dots become real ones. A run of more
-   than 30 combining marks is cut to 30 first, as the Unicode Stream-Safe Text Format
-   (UAX #15) does, which keeps the time linear on hostile names.
+1. NFKC normalisation, so full-width slashes and dots become real ones. Before it, every
+   run of more than 30 combining marks (counted on the NFKD decomposition) loses the
+   marks after the 30th, which keeps the time linear on hostile names. The limit of 30
+   comes from the Unicode Stream-Safe Text Format (UAX #15), but UAX #15 keeps every
+   mark and splits the run with U+034F COMBINING GRAPHEME JOINER; this library drops
+   them, since no file name needs them. The ASCII fallback of `build` does the same.
 2. Only the text after the last `/` or `\` is kept.
 3. Control characters, lone surrogates and invisible format characters (bidi controls,
    zero-width spaces, soft hyphens) are removed, except the joiners inside emoji and

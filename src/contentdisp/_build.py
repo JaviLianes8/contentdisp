@@ -26,8 +26,10 @@ def build(type: str | ContentDisposition, /, filename: str | None = None, **para
     as a quoted-string, in the order given, ``filename`` first. Keyword names use ``-``
     for ``_`` and are lower-cased. Given a ``ContentDisposition`` instead of a type, its
     type and parameters are written, names as they are (lower-cased), before ``filename``
-    and the keywords: ``build(parse(header))`` writes a parsed header again, and a name
-    with ``_`` or one that is not a Python identifier can be written this way.
+    and the keywords: ``build(parse(header))`` writes a parsed header again, unless the
+    type is not a token or a value holds a control character (a C1 control is legal
+    obs-text in a quoted-string), which ``build`` refuses. A name with ``_`` or one that
+    is not a Python identifier can be written this way.
 
     When the ASCII ``filename="..."`` form cannot carry a value faithfully (non-ASCII,
     ``\\``, ``"`` or a ``%HH`` sequence, all avoided by RFC 6266 Appendix D) a
@@ -39,7 +41,8 @@ def build(type: str | ContentDisposition, /, filename: str | None = None, **para
     Raises ``ContentDispositionError`` for a type or name that is not a token, an extended
     name (a token followed by ``*``), a name given twice (names are case-insensitive), or
     a value with a control character other than tab (CR and LF are escaped for
-    ``form-data``) or a lone surrogate; ``TypeError`` for an argument of the wrong type.
+    ``form-data``) or a lone surrogate; ``TypeError`` for an argument of the wrong type,
+    including a parameter name that is not a ``str``.
 
     >>> from contentdisp import ContentDisposition, build, parse
     >>> build("attachment", "report.pdf")
@@ -55,12 +58,14 @@ def build(type: str | ContentDisposition, /, filename: str | None = None, **para
     >>> build(ContentDisposition("inline", {"my_name": "x"}), "a.txt")
     'inline; my_name="x"; filename="a.txt"'
     """
-    items: list[tuple[str, object]] = []
+    items: list[tuple[object, object]] = []
     if isinstance(type, ContentDisposition):
         items.extend(type.params.items())
         type = type.type
-    elif not isinstance(type, str):
+    if not isinstance(type, str):
         raise TypeError(f"type must be a str or ContentDisposition, not {type_name(type)}")
+    # Plain copies: a str subclass could override __iter__ or strip to hide what it holds.
+    type = str.__str__(type)
     if not is_token(type.strip()):
         raise ContentDispositionError(f"disposition type must be a token: {show(type)}")
     disposition_type = type.strip().lower()
@@ -71,6 +76,9 @@ def build(type: str | ContentDisposition, /, filename: str | None = None, **para
     parts = [disposition_type]
     seen: set[str] = set()
     for raw_name, value in items:
+        if not isinstance(raw_name, str):
+            raise TypeError(f"parameter names must be str, not {type_name(raw_name)}")
+        raw_name = str.__str__(raw_name)
         if not is_token(raw_name) or is_ext_name(raw_name):
             raise ContentDispositionError(
                 f"parameter name must be a token, not an extended name: {show(raw_name)}"
@@ -81,6 +89,7 @@ def build(type: str | ContentDisposition, /, filename: str | None = None, **para
         seen.add(name)
         if not isinstance(value, str):
             raise TypeError(f"parameter {show(name)} must be a str, not {type_name(value)}")
+        value = str.__str__(value)
         _check_controls(name, value, allow_newlines=form_data)
         parts.extend(_render_form_data(name, value) if form_data else _render(name, value))
     return "; ".join(parts)

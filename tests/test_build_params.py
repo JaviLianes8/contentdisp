@@ -97,3 +97,19 @@ def test_the_fallback_transliterates_compatibility_characters() -> None:
     # NFKD, not NFD: the "fi" ligature U+FB01 becomes "fi", not "_".
     header = build("attachment", "ﬁle.txt")
     assert header == "attachment; filename=\"file.txt\"; filename*=UTF-8''%EF%AC%81le.txt"
+
+
+@pytest.mark.parametrize("name", [None, 1, b"x"], ids=repr)
+def test_a_parameter_name_of_the_wrong_kind_is_a_type_error(name: object) -> None:
+    value = ContentDisposition("inline")
+    value.params[name] = "x"  # type: ignore[index]
+    with pytest.raises(TypeError, match="parameter names must be str, not"):
+        build(value)
+
+
+def test_names_of_a_value_are_checked_before_case_folding() -> None:
+    # The Kelvin sign lower-cases to "k": the check must see the name as given.
+    with pytest.raises(ContentDispositionError, match="must be a token"):
+        build(ContentDisposition("\u212a"))
+    with pytest.raises(ContentDispositionError, match="token"):
+        build(ContentDisposition("inline", {"\u212aey": "x"}))

@@ -22,7 +22,10 @@ def normalize(form: Literal["NFKC", "NFKD"], text: str) -> str:
 
     Runs are counted on the decomposition, so a starter that decomposes into marks (such
     as U+0F73) cannot hide them. Text without such a run normalises exactly as before.
+    The result is always a plain ``str``.
     """
+    # A str subclass can override any method (isascii, __iter__) to skip the work below.
+    text = str.__str__(text)
     if text.isascii():
         return text
     kept: list[str] = []
