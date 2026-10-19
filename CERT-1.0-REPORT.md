@@ -14,7 +14,7 @@ Progress:
 - [x] Packaging, e2e and upgrade from PyPI 0.2.1, every Python (items 8, 10, 13, 14)
 - [x] Author mutation round (item 18)
 - [x] Gates (item 15)
-- [ ] Five QA lenses report PASS (item 19): rounds 1 to 8 findings fixed, re-verification pending
+- [ ] Five QA lenses report PASS (item 19): rounds 1 to 9 findings fixed, re-verification pending
 - [ ] Independent reviewer reports PASS (item 16)
 - [x] PR #4 opened, trace guard CLEAN (item 17); merge and publish left to the maintainer
 
@@ -149,10 +149,10 @@ that commit fails it.
 
 ## Gates (item 15)
 
-Latest run at d062331 on Elena's PC (Python 3.14.2) from a fresh clone, each command on
+Latest run at ec54768 on Elena's PC (Python 3.14.2) from a fresh clone, each command on
 its own, with the fetched sources, Node.js, werkzeug, aiohttp, multipart, the 0.2.1
 oracle, `CONTENTDISP_E2E=1` and `CONTENTDISP_E2E_PYPI=1`: `ruff format --check .`,
-`ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` (848 passed,
+`ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` (852 passed,
 no skip) all exit 0. Earlier runs after each QA round are listed with that round below.
 
 ## QA lenses (item 19)
@@ -403,6 +403,29 @@ and the unclosed check turned off are killed.
 Gates: see Gates (d062331, 848 passed, no skip).
 
 Re-verification of round 8 by the same lenses: pending.
+
+### Round 9 (lens e at df599e5)
+
+Lens e found its two round 8 findings (N4-D12, N5-C12) resolved, the BASE run green and
+33 new mutants of the language prefix code either killed or shown equivalent. It reported
+two gaps in the contract for `_ENDINGS` in `_langtag.py`: no behaviour was wrong, but four
+mutants of the fill survived the default gate. Neither finding is disputed. The new cases
+pass on df599e5, as they pin behaviour that was right, and were checked against the
+mutants instead. The change is in ec54768.
+
+| Id | Finding | What changed |
+| --- | --- | --- |
+| e/N6-E1 | The fill length and the one-more-subtag tail of `_ENDINGS` were not pinned for starts longer than 4 characters (mutants L2 `range(3)`, L3 `range(2)`, L7 tails `("-aa",)` only) | `UTF-8'aa-a0`, `UTF-8'en-a0)` and `UTF-8'en-a-` added to `tests/test_ext_positions.py` (`malformed extended value` at 33, as asked). `tests/test_ext_language_prefix.py` now checks every language of up to 6 characters (was 4) against the starts of every oracle tag of up to 9 characters; no start of up to 6 needs more than 3 more characters, checked by comparing the starts of tags up to 9 and up to 10 long (no difference up to length 6) |
+| e/N6-E2 | The letter run of `_ENDINGS` was not pinned (mutant L5, digit fill only): the test alphabet's only plain letter, `a`, starts the grandfathered `art-lojban` | `UTF-8'g1` added (`malformed language tag` at 29, as asked); the brute-force alphabet is now `a`, `b`, `x`, `0` and `-`, where `b` starts no grandfathered tag |
+
+Mutants run on this PC against the two changed test files, each alone: L2, L3, L5 and L7
+are killed (L2, L3 and L7 by `UTF-8'en-a0)`, L5 by `UTF-8'g1`, and by the brute-force
+test, which fails on each of the four alone); L1 (`range(4)`) still passes, as the reviewer showed it equivalent (no start needs
+a fill of more than 4).
+
+Gates: see Gates (ec54768, 852 passed, no skip).
+
+Re-verification of round 9 by lens e: pending.
 
 ## Independent review (item 16)
 
