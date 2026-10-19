@@ -26,17 +26,19 @@ defines it, its language part an RFC 5646 language tag.
   `filename*` are different names).
 - In a `str`, every character above U+00FF counts as `obs-text`: the text was decoded
   already, whatever its encoding.
-- Extended values are decoded in UTF-8 and ISO-8859-1. Invalid octets for the charset
-  (bad UTF-8, or the controls 0x00 to 0x1F and 0x7F to 0x9F, which have no graphic
-  character in ISO/IEC 8859-1) are an error; a value in any
-  other charset is well formed but not understood, so the parameter is ignored, in both
-  modes.
+- Extended values are decoded in UTF-8 and ISO-8859-1. Octets invalid in the charset
+  (bad UTF-8) are an error, and so is decoded text holding a control other than HTAB
+  (U+0000 to U+0008, U+000A to U+001F and U+007F to U+009F) in either charset: ISO/IEC
+  8859-1 has no graphic character there, `build` refuses the same characters, and a file
+  name is valid or not whatever its charset label. A value in any other charset is well
+  formed but not understood, so the parameter is ignored, in both modes.
 - `ContentDispositionError.position` is the index of the first character that breaks
   the grammar, a CR, LF or NUL included, or the end of the header when it stops too
   early. Two errors point at the start of a part instead: an extended value whose octets
-  are invalid in its charset (its grammar holds) points at the start of the value, and a
-  language part made of letters, digits and hyphens that is not a well-formed tag points
-  at its first character.
+  are invalid in its charset or decode to a control (its grammar holds) points at the
+  start of the value, and a language part made of letters, digits and hyphens, closed by
+  its `'`, that is not a well-formed tag points at its first character, even when a later
+  character of the value breaks the grammar too.
 
 ```python
 from contentdisp import ContentDispositionError, parse
@@ -58,7 +60,8 @@ one; on the others:
   lower-cased, whatever it holds. When that text has the form `name=value` (a server that
   forgot the type) it is also read as a parameter, as Chrome and Firefox do.
 - A segment without `=`, or whose name is not a token, is skipped; so is an extended
-  value that does not decode, which lets the plain `filename` win.
+  value that does not decode or decodes to a control other than HTAB, which lets the
+  plain `filename` win. So no value holds a CR, LF or NUL, raw or percent-encoded.
 - The first of a repeated parameter wins.
 - A quoted value ends at its closing quote (text after it is ignored) or, unterminated,
   at the end of the header; an unquoted value is taken as written, spaces included.

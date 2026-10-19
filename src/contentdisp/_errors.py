@@ -13,7 +13,8 @@ class ContentDispositionError(ValueError):
     It is a ``ValueError``, so code written for ``except ValueError`` keeps working.
     ``position`` is the index in the header of the first character that breaks the
     grammar when the error comes from ``parse(header, strict=True)`` (``parse`` names two
-    errors that point at the start of a value instead), and ``None`` for
+    errors that point at the start of a value or of its language tag instead; the GUIDE
+    lists them), and ``None`` for
     errors that do not come from reading a header (``build``, ``safe_filename``).
     Messages quote at most 40 characters of any input.
 

@@ -30,7 +30,7 @@ CASES = [
     ("attachment; filename=a; FILENAME=b", "parameter 'filename' appears more than once", 24),
     ("attachment; filename*=\"UTF-8''a\"", "malformed extended value for 'filename*'", 22),
     ("attachment; filename*=UTF-8''%E4", "invalid UTF-8 in extended value", 22),
-    ("attachment; filename*=ISO-8859-1''%82", "octet outside ISO-8859-1", 22),
+    ("attachment; filename*=ISO-8859-1''%82", "control character in extended value", 22),
     ("attachment; filename*=UTF-8'1'a", "malformed language tag", 28),
     ("attachment; filename*= UTF-8'en_US'a", "malformed extended value", 31),
     ('attachment; filename="a\x01"', "invalid character '\\x01' in quoted-string", 23),

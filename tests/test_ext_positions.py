@@ -21,6 +21,8 @@ CASES = [
     ("attachment; filename*=UTF-8''%G0", "malformed extended value", 30),
     ("attachment; filename*=UTF-8''%4G", "malformed extended value", 31),
     ("attachment; filename*=UTF-8''%", "malformed extended value", 30),
+    ("attachment; filename*=UTF-8''%aZ", "malformed extended value", 31),
+    ("attachment; filename*=UTF-8''%e", "malformed extended value", 31),
     ("attachment; filename*=UTF-8''a%; x=1", "malformed extended value", 31),
     ("attachment; filename*=UTF-8''a\"b", "malformed extended value", 30),
     ("attachment; filename*=UTF-8'en_US'a", "malformed extended value", 30),
@@ -32,9 +34,16 @@ CASES = [
     # A language part of letters, digits and hyphens that is not a tag: its first character.
     ("attachment; filename*= UTF-8'-en'a", "malformed language tag", 29),
     ("attachment; filename*=UTF-8'1'a", "malformed language tag", 28),
+    # The tag is reported even when the value-chars after it break the grammar later.
+    ("attachment; filename*=UTF-8'-en'%G0", "malformed language tag", 28),
+    ("attachment; filename*=UTF-8'en-a'%G0", "malformed language tag", 28),
+    ("attachment; filename*=UTF-8'1en'a\"", "malformed language tag", 28),
+    ("Y.c&9+  ;\tfilename*\t= iso-8859-1'en-'!%E\x002%A01_|", "malformed language tag", 33),
+    # A later error in a well-formed tag's value keeps its own position.
+    ("attachment; filename*=UTF-8'en'%G0", "malformed extended value", 32),
     # Octets invalid in their charset: the start of the value.
     ("attachment; filename*=UTF-8''ok%E4", "invalid UTF-8 in extended value", 22),
-    ("attachment; filename*=iso-8859-1''ok%85", "octet outside ISO-8859-1", 22),
+    ("attachment; filename*=iso-8859-1''ok%85", "control character in extended value", 22),
 ]
 
 
@@ -57,15 +66,24 @@ def test_a_charset_outside_mime_charsetc_is_an_error(charset: str) -> None:
     assert parse(header).params == {}
 
 
-def test_a_well_formed_unknown_charset_is_ignored() -> None:
-    assert parse("attachment; filename*=koi8-r''abc", strict=True).params == {}
-    assert parse("attachment; filename=a; filename*=koi8-r''b", strict=True).filename == "a"
+# RFC 8187 section 3.2.1: mime-charsetc is ALPHA / DIGIT and these punctuation characters.
+MIME_CHARSETC = ["koi8-r", "a!#$%&+-^_`{}~z", "x{y}", "x`y", "x^y"]
 
 
-@pytest.mark.parametrize("octet", ["00", "09", "1B", "1F", "7F", "80", "85", "9F"])
+@pytest.mark.parametrize("charset", MIME_CHARSETC)
+def test_a_well_formed_unknown_charset_is_ignored(charset: str) -> None:
+    assert parse(f"attachment; filename*={charset}''abc", strict=True).params == {}
+    header = f"attachment; filename=a; filename*={charset}''b"
+    assert parse(header, strict=True).filename == "a"
+    assert parse(header).filename == "a"
+
+
+@pytest.mark.parametrize("octet", ["00", "08", "0A", "1B", "1F", "7F", "80", "85", "9F"])
 def test_iso_8859_1_control_octets_are_invalid(octet: str) -> None:
     header = f"attachment; filename=\"plain\"; filename*=iso-8859-1''a%{octet}"
-    with pytest.raises(ContentDispositionError, match="octet outside ISO-8859-1") as caught:
+    with pytest.raises(
+        ContentDispositionError, match="control character in extended value"
+    ) as caught:
         parse(header, strict=True)
     assert caught.value.position == header.index("iso")
     assert parse(header).filename == "plain"
@@ -76,8 +94,3 @@ def test_iso_8859_1_graphic_octets_decode(octets: str, text: str) -> None:
     header = f"attachment; filename*=ISO-8859-1''{octets}"
     assert parse(header, strict=True).filename == text
     assert parse(header).filename == text
-
-
-def test_utf8_keeps_every_code_point() -> None:
-    # UTF-8 is not ISO-8859-1: every scalar value, controls included, is a character.
-    assert parse("attachment; x*=UTF-8''%00%C2%85", strict=True).params == {"x": "\x00\x85"}

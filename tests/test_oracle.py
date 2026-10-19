@@ -75,6 +75,7 @@ PIECES = [
 NAMES = ["filename", "FileName", "name", "a*b", "filename*", "title*", "x"]
 VALUES = ["tok", '"a b"', '"a;b"', "UTF-8''%41", "ISO-8859-1''%85", "UTF-8''%C3", "x'y'z"]
 VALUES += ["UTF-8'de-CH-1901'%41", "utf-8'i-klingon'a", "UTF-8'en-a-bb-x-1'a", "UTF-8'en-'a"]
+VALUES += ["UTF-8''%0A", "UTF-8''%C2%85", "UTF-8''%09", "ISO-8859-1''%09", "UTF-8'-x'%G"]
 
 
 def _structured(rng: random.Random) -> str:
@@ -117,12 +118,15 @@ def _ext_ok(value: str) -> bool:
     octets = unquote_to_bytes(chars)
     if charset.lower() == "utf-8":
         try:
-            octets.decode("utf-8")
+            text = octets.decode("utf-8")
         except UnicodeDecodeError:
             return False
-    if charset.lower() == "iso-8859-1":
-        return not any(octet < 0x20 or 0x7F <= octet <= 0x9F for octet in octets)
-    return True
+    elif charset.lower() == "iso-8859-1":
+        text = octets.decode("latin-1")
+    else:
+        return True
+    # Controls other than HTAB (C0, DEL and C1) are invalid in either charset.
+    return not any(char != "\t" and (char < " " or "\x7f" <= char <= "\x9f") for char in text)
 
 
 def test_strict_mode_accepts_exactly_what_the_oracle_accepts() -> None:

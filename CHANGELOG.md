@@ -56,13 +56,18 @@ defaults and error types follow Semantic Versioning from this release on.
   used to come back as that subclass).
 - Every `ValueError` the library raises is now a `ContentDispositionError`, a subclass,
   so `except ValueError` keeps working.
-- Strict and lenient parsing take the ISO-8859-1 octets 0x00 to 0x1F and 0x7F, like
-  0x80 to 0x9F, as invalid in an extended value: ISO/IEC 8859-1 has no graphic
-  character there. `filename*=iso-8859-1''%00` used to decode to NUL; now strict parsing
-  raises and lenient parsing ignores the parameter, so a plain `filename` wins.
+- An extended value whose decoded text holds a control other than HTAB (U+0000 to
+  U+0008, U+000A to U+001F, U+007F to U+009F) is invalid, in UTF-8 as in ISO-8859-1:
+  ISO/IEC 8859-1 has no graphic character there, `build` refuses the same characters,
+  and a file name is no longer valid or not by its charset label alone. Strict parsing
+  raises at the start of the value (message `control character in extended value`)
+  and lenient parsing ignores the parameter, so a plain `filename` wins.
+  `filename*=UTF-8''a%0D%0Ab` used to give a name holding a raw CR LF in both modes,
+  and `%00` a NUL, in either charset. HTAB is still decoded, as a quoted-string takes it.
 - Strict parsing checks the language part of an extended value against the RFC 5646
-  grammar that RFC 8187 refers to (`UTF-8'1'a` used to pass); lenient parsing still
-  skips any language made of letters, digits and hyphens.
+  grammar that RFC 8187 refers to (`UTF-8'1'a` used to pass), and reports a malformed
+  tag at its start even when a later character of the value breaks the grammar too;
+  lenient parsing still skips any language made of letters, digits and hyphens.
 - Strict error offsets count from the start of the header as given; they used to count
   from the header without its leading spaces. Messages end with `at offset N`.
 - `is_attachment` is false for a type that is not a token, which only lenient parsing

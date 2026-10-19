@@ -74,7 +74,7 @@ def test_other_argument_types_are_rejected() -> None:
         ("attachment; filename=a; FILENAME=b", "more than once"),
         ("attachment; filename*=\"UTF-8''a\"", "malformed extended value"),
         ("attachment; filename*=UTF-8''%E4", "invalid UTF-8"),
-        ("attachment; filename*=ISO-8859-1''%82", "outside ISO-8859-1"),
+        ("attachment; filename*=ISO-8859-1''%82", "control character in extended value"),
         ('attachment; filename="a\x01"', "invalid character"),
         ("attachment; filename=a\r\n", "CR, LF and NUL"),
     ],

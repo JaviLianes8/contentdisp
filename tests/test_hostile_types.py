@@ -69,3 +69,23 @@ def test_a_class_whose_name_raises_still_gets_a_type_error(
 ) -> None:
     with pytest.raises(TypeError, match="_Nameless"):
         call(_Nameless())
+
+
+@pytest.mark.parametrize("call", CALLS[:2])
+def test_a_class_name_of_the_message_limit_is_shown_whole(
+    call: Callable[[object], object],
+) -> None:
+    with pytest.raises(TypeError) as caught:
+        call(type("A" * 40, (), {})())
+    assert f" {'A' * 40}" in str(caught.value)
+    assert "..." not in str(caught.value)
+
+
+@pytest.mark.parametrize("call", CALLS[:2])
+def test_a_longer_class_name_is_cut_to_the_message_limit(
+    call: Callable[[object], object],
+) -> None:
+    with pytest.raises(TypeError) as caught:
+        call(type("B" * 41, (), {})())
+    assert f" {'B' * 37}..." in str(caught.value)
+    assert "B" * 38 not in str(caught.value)
