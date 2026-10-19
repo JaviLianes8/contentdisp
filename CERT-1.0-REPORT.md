@@ -14,7 +14,7 @@ Progress:
 - [x] Packaging, e2e and upgrade from PyPI 0.2.1, every Python (items 8, 10, 13, 14)
 - [x] Author mutation round (item 18)
 - [x] Gates (item 15)
-- [ ] Five QA lenses report PASS (item 19): rounds 1 to 5 findings fixed, re-verification pending
+- [ ] Five QA lenses report PASS (item 19): rounds 1 to 6 findings fixed, re-verification pending
 - [ ] Independent reviewer reports PASS (item 16)
 - [x] PR #4 opened, trace guard CLEAN (item 17); merge and publish left to the maintainer
 
@@ -149,10 +149,10 @@ that commit fails it.
 
 ## Gates (item 15)
 
-Latest run at 4424d12 on the laptop (Python 3.14.6) from a fresh clone, each command on
+Latest run at 1be185c on Elena's PC (Python 3.14.2) from a fresh clone, each command on
 its own, with the fetched sources, Node.js, werkzeug, aiohttp, multipart, the 0.2.1
 oracle, `CONTENTDISP_E2E=1` and `CONTENTDISP_E2E_PYPI=1`: `ruff format --check .`,
-`ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` (688 passed,
+`ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` (749 passed,
 no skip) all exit 0. Earlier runs after each QA round are listed with that round below.
 
 ## QA lenses (item 19)
@@ -310,7 +310,45 @@ fetched sources, Node.js, werkzeug, aiohttp, multipart, the 0.2.1 oracle,
 `ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` all exit 0
 (688 passed, no skip).
 
-Re-verification of round 5 by the same lens: pending.
+Re-verification of round 5 by the same lens: done in round 6.
+
+### Round 6 (lenses a, b, c, d and e at 8d94bf4)
+
+All five lenses ran again on a fresh view of the branch. Lens a re-checked its earlier
+findings (fixed) and ran every doctest, README and GUIDE example; lens b re-derived the
+tc2231 responses, the RFC 6266 and RFC 8187 examples, Chromium's expectations and an
+independent ABNF oracle over 1.6 million headers without a mismatch; lens c fuzzed about
+80,000 strict-valid headers and 176,000 builds and timed 45 hostile shapes up to 1.6 MB
+(all linear); lens d built and installed the wheel and the sdist; lens e ran its own
+mutation round. None of the findings is disputed. Contract tests for the behaviour bugs
+(b/F1, b/F2, b/F3, c/F1, c/F2) were added first and failed on 8d94bf4: 34 test cases
+in `tests/test_ext_positions.py`, `tests/test_hostile_types.py` and
+`tests/test_positions.py`. The fixes are in 1be185c.
+
+| Id | Finding | What changed |
+| --- | --- | --- |
+| a/A1 | `build(parse(header))` refuses a name ending in `*` (`a**=UTF-8''x` parses to `a*`), a fourth kind the docs did not list | Documented as the fourth kind in the GUIDE, the `build` docstring and both CHANGELOG entries; behaviour unchanged (`build` never writes an extended name). Test: `tests/test_build_params.py::test_a_parsed_name_ending_in_a_star_is_refused` |
+| a/A2 | The 30-mark cut was described as applying to combining marks; it counts non-starters | GUIDE step 1, the `safe_filename` docstring and the CHANGELOG say non-starters (a non-zero canonical combining class); the GUIDE names U+20DD and U+093F as class 0 marks that are never cut (U+093F already pinned by `tests/test_mark_runs.py`) |
+| a/A3 | A CHANGELOG bullet claimed 0.2.1 let an `isascii` or `__iter__` override skip normalisation | Clause removed; the bullet keeps the `__iter__` control character in `build` and the plain `str` default, both checked against the 0.2.1 wheel |
+| b/F1 | A CR, LF or NUL anywhere was reported before an earlier grammar error | Strict parsing reads the grammar first and treats CR, LF and NUL as ordinary invalid characters; when one of them is the first offending character the message still names it. 60,000 seeded headers with CR, LF or NUL inserted: strict parsing never accepts one and never points past the first |
+| b/F2 | A malformed extended value was reported at the start of the value | The position is the first character the RFC 8187 grammar cannot take (charset, delimiter, language, value character or the broken pct-encoding). Two documented exceptions point at a start: octets invalid in their charset (the start of the value) and a language part that is not a well-formed tag (its first character). GUIDE, `parse` and `ContentDispositionError` docstrings, README; the GUIDE example now prints offset 30 |
+| b/F3 | ISO-8859-1 C1 octets were invalid but C0 and DEL decoded | 0x00 to 0x1F and 0x7F to 0x9F are all invalid in an ISO-8859-1 extended value (no graphic character in ISO/IEC 8859-1): strict parsing raises, lenient parsing ignores the parameter. The regex oracle in `tests/test_oracle.py` follows; GUIDE and CHANGELOG Changed (0.2.1 decoded `%00` to NUL, checked) |
+| b/F4 | README: the `email` package does not always keep whichever comes first | Reworded: `Message.get_filename` always returns the plain `filename`, `EmailMessage` keeps whichever comes first (both checked on CPython 3.13.2) |
+| c/F1 | `parse` used `str` and `bytes` subclasses as given (an overridden `replace` let raw CR LF through; an odd `decode` raised `AttributeError`) | `parse` works on plain copies (`str.__str__`, `bytes.decode`). CHANGELOG Fixed (both checked on the 0.2.1 wheel) |
+| c/F2 | A metaclass `__name__` property made every wrong-type path raise its own error | `type_name` reads the name through the descriptor of `type` itself; `parse`, `build`, `safe_filename` and `ContentDisposition` give the documented `TypeError`. CHANGELOG Fixed |
+| d/F1 | The linear-time test failed once under foreign CPU load | Small and large inputs are timed in turns, the best of three kept, and a slow-looking round is measured again (up to four rounds); a quadratic cost fails every round |
+| e/F1-X10 | No test pinned the RFC 8187 mime-charset class (X10: `.` allowed) | Strict parsing of `utf.8`, `utf/8`, `utf:8`, `utf(8`, `utf@8` and `utf 8` raises at the offending character; a well-formed unknown charset (`koi8-r`) is ignored |
+| e/F2-B08 | No test pinned the form-data decision for another case or surrounding spaces (B08) | `Form-Data`, ` form-data`, `form-data `, a tab-wrapped `FORM-DATA` and `ContentDisposition("FORM-DATA")` build exactly like `form-data`, with no `filename*` |
+| e/F3-P17 | Only an opt-in test pinned that a backslash outside quotes is ordinary (P17) | Always-on lenient tests: `filename=C:\dir\;size=3` and two others split at the `;` |
+
+Mutants re-run on this PC, each alone, on the new tests: X10, B08 and P17 are killed, and so
+is a changed refusal message for an extended name. CHANGELOG claims added this round were
+checked against the PyPI 0.2.1 wheel (`replace` override, odd `decode`, metaclass name,
+`%00` in ISO-8859-1).
+
+Gates: see Gates (1be185c, 749 passed, no skip).
+
+Re-verification of round 6 by the same lenses: pending.
 
 ## Independent review (item 16)
 
