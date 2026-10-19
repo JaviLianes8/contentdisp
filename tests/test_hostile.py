@@ -55,6 +55,9 @@ HEADERS: dict[str, Callable[[int], str]] = {
     "variants": lambda n: "a;x*=UTF-8'en" + "-abcde" * (n // 6) + "'b",
     "extensions": lambda n: "a;x*=UTF-8'en-a" + "-bb" * (n // 3) + "'b",
     "private use": lambda n: "a;x*=UTF-8'x" + "-a" * (n // 2) + "'b",
+    "unclosed variants": lambda n: "a;x*=UTF-8'en" + "-abcde" * (n // 6) + ")b",
+    "unclosed private use": lambda n: "a;x*=UTF-8'x" + "-a" * (n // 2),
+    "unclosed late break": lambda n: "a;x*=UTF-8'en" + "-abcde" * (n // 6) + "-abcdefghi",
     "type only": lambda n: "a" * n,
     "controls": lambda n: "a;x=" + "\r\n" * (n // 2),
 }

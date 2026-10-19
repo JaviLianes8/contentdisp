@@ -6,7 +6,7 @@ import re
 from urllib.parse import quote, unquote_to_bytes
 
 from ._errors import ContentDispositionError
-from ._langtag import is_language_tag
+from ._langtag import is_language_tag, tag_prefix_length
 
 # RFC 8187 3.2.1. Every well-formed language tag is made of letters, digits and hyphens,
 # so this pattern reads it; strict parsing then checks the RFC 5646 grammar, while
@@ -46,15 +46,15 @@ def decode_ext_value(raw: str, *, strict: bool) -> str:
     Only UTF-8 (required by RFC 8187) and ISO-8859-1 (encouraged for compatibility) are
     understood; any other charset raises ``UnsupportedCharsetError``. With ``strict`` the
     language part must be a well-formed RFC 5646 tag, reported at its start even when a
-    later character breaks the grammar too. In either charset the decoded text may hold
+    later character breaks the grammar too (when the part is not closed by its quote, at
+    its first character that no tag can continue with). In either charset the decoded text may hold
     no control other than HTAB. Messages never quote ``raw``.
     """
     match = _EXT_VALUE.fullmatch(raw)
     if match is None:
         position = _first_bad(raw)
-        tag = _delimited_language(raw) if strict else None
-        if tag is not None and tag[0] < position and not is_language_tag(tag[1]):
-            raise ContentDispositionError(_BAD_TAG, position=tag[0])
+        if strict:
+            _check_language(raw, position)
         raise ContentDispositionError("malformed extended value", position=position)
     language = match.group("language")
     if strict and language and not is_language_tag(language):
@@ -75,16 +75,27 @@ def decode_ext_value(raw: str, *, strict: bool) -> str:
     return text
 
 
-def _delimited_language(raw: str) -> tuple[int, str] | None:
-    """The start and text of a non-empty language part closed by its quote, if there is one."""
+def _check_language(raw: str, position: int) -> None:
+    """Raise the tag error for a language part that breaks RFC 5646 before ``position``.
+
+    A part closed by its quote that is not a tag is reported at its start; a part the
+    value grammar cut short, at its first character no tag can continue with.
+    """
     charset = _PARTS[0][0].match(raw)
     if charset is None or not raw.startswith("'", charset.end()):
-        return None
+        return
     start = charset.end() + 1
     language = _PARTS[1][0].match(raw, start)
-    if language is None or not language.group() or not raw.startswith("'", language.end()):
-        return None
-    return start, language.group()
+    if language is None or not language.group():
+        return
+    text = language.group()
+    if raw.startswith("'", language.end()):
+        bad = None if is_language_tag(text) else start
+    else:
+        length = tag_prefix_length(text)
+        bad = start + length if length < len(text) else None
+    if bad is not None and bad < position:
+        raise ContentDispositionError(_BAD_TAG, position=bad)
 
 
 def _first_bad(raw: str) -> int:

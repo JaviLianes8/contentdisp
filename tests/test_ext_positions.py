@@ -39,6 +39,17 @@ CASES = [
     ("attachment; filename*=UTF-8'en-a'%G0", "malformed language tag", 28),
     ("attachment; filename*=UTF-8'1en'a\"", "malformed language tag", 28),
     ("Y.c&9+  ;\tfilename*\t= iso-8859-1'en-'!%E\x002%A01_|", "malformed language tag", 33),
+    # A language part the value grammar cuts short: its first character no tag continues.
+    ("attachment; filename*=UTF-8'-en", "malformed language tag", 28),
+    ("attachment; filename*=UTF-8'-en)'a", "malformed language tag", 28),
+    ("attachment; filename*=UTF-8'1en", "malformed language tag", 28),
+    ("attachment; filename*=UTF-8'-en_US'a", "malformed language tag", 28),
+    ("attachment; filename*=0%'c0", "malformed language tag", 26),
+    ("attachment; filename*=UTF-8'en-US-a_b'a", "malformed extended value", 35),
+    # A start that some tag continues is no tag error: the grammar error stands.
+    ("attachment; filename*=UTF-8'x", "malformed extended value", 29),
+    ("attachment; filename*=UTF-8'en-", "malformed extended value", 31),
+    ("attachment; filename*=UTF-8'en-a", "malformed extended value", 32),
     # A later error in a well-formed tag's value keeps its own position.
     ("attachment; filename*=UTF-8'en'%G0", "malformed extended value", 32),
     # Octets invalid in their charset: the start of the value.

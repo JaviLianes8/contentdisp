@@ -66,8 +66,11 @@ defaults and error types follow Semantic Versioning from this release on.
   and `%00` a NUL, in either charset. HTAB is still decoded, as a quoted-string takes it.
 - Strict parsing checks the language part of an extended value against the RFC 5646
   grammar that RFC 8187 refers to (`UTF-8'1'a` used to pass), and reports a malformed
-  tag at its start even when a later character of the value breaks the grammar too;
-  lenient parsing still skips any language made of letters, digits and hyphens.
+  tag at its start even when a later character of the value breaks the grammar too.
+  A language part that is not closed by its `'` is reported at its first character
+  that no tag can continue with (`UTF-8'-en` at the `-`, `UTF-8'1en` at the `1`), not at
+  the end of the part; lenient parsing still skips any language made of letters, digits
+  and hyphens.
 - Strict error offsets count from the start of the header as given; they used to count
   from the header without its leading spaces. Messages end with `at offset N`.
 - `is_attachment` is false for a type that is not a token, which only lenient parsing

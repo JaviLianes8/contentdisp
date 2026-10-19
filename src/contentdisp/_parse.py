@@ -20,9 +20,9 @@ def parse(header: str | bytes, *, strict: bool = False) -> ContentDisposition:
     a repeated parameter, or a ``name*`` value whose octets are invalid in its charset
     or decode to a control other than HTAB raises ``ContentDispositionError`` with the
     ``position`` of the first offending character (for such a value, the start of the
-    value; for a malformed language tag, the start of the tag, even when a later
-    character also breaks the grammar). A ``name*`` in a charset other than UTF-8 or
-    ISO-8859-1 is ignored in both modes.
+    value; for a malformed language tag closed by its quote, the start of the tag, even
+    when a later character also breaks the grammar). A ``name*`` in a charset other than
+    UTF-8 or ISO-8859-1 is ignored in both modes.
 
     The default lenient mode gives the same result on every valid header and never
     raises ``ContentDispositionError``: it skips parameters it cannot read, ignores a

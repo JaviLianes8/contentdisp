@@ -38,7 +38,10 @@ defines it, its language part an RFC 5646 language tag.
   are invalid in its charset or decode to a control (its grammar holds) points at the
   start of the value, and a language part made of letters, digits and hyphens, closed by
   its `'`, that is not a well-formed tag points at its first character, even when a later
-  character of the value breaks the grammar too.
+  character of the value breaks the grammar too. A language part that is not closed (the
+  value ends, or another character follows it) points at its first character that no
+  tag can continue with: `UTF-8'-en` at the `-`, `0%'c0` at the `0`; when every tag
+  could still go on (`UTF-8'en-`), the grammar error after it stands.
 
 ```python
 from contentdisp import ContentDispositionError, parse
