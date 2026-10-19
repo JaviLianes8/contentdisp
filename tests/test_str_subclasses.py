@@ -100,3 +100,55 @@ def test_build_writes_the_real_type_not_what_strip_or_lower_returns(wrap: object
 @pytest.mark.parametrize("default", [" dl ", "\tdl\n", "\x00dl\u202e"])
 def test_the_default_keeps_its_whitespace_and_controls(name: str | None, default: str) -> None:
     assert safe_filename(name, default=default) == default
+
+
+class _LowerX(str):
+    def lower(self) -> str:
+        return "x"
+
+    def strip(self, chars: str | None = None) -> str:
+        return "x"
+
+
+class _ClaimsFormData(str):
+    def strip(self, chars: str | None = None) -> str:
+        return "form-data"
+
+    def lower(self) -> str:
+        return "form-data"
+
+
+class _ClaimsInline(str):
+    def strip(self, chars: str | None = None) -> str:
+        return "inline"
+
+    def lower(self) -> str:
+        return "inline"
+
+
+def test_duplicate_names_are_judged_by_their_real_characters() -> None:
+    distinct = ContentDisposition("inline", {_LowerX("a"): "1", _LowerX("b"): "2"})
+    assert build(distinct) == 'inline; a="1"; b="2"'
+    same = ContentDisposition("inline", {_LowerX("A"): "1", _LowerX("a"): "2"})
+    with pytest.raises(ContentDispositionError, match="given more than once"):
+        build(same)
+
+
+def test_an_extended_name_is_refused_by_its_real_characters() -> None:
+    with pytest.raises(ContentDispositionError, match="not an extended name"):
+        build(ContentDisposition("inline", {_LowerX("filename*"): "v"}))
+
+
+@pytest.mark.parametrize("wrap", [lambda t: t, lambda t: ContentDisposition(t)])
+def test_form_data_is_decided_by_the_real_type(wrap: object) -> None:
+    with pytest.raises(ContentDispositionError, match="control character"):
+        build(wrap(_ClaimsFormData("inline")), "a\r\nb.txt")  # type: ignore[operator]
+    real = build(wrap(_ClaimsInline("form-data")), "a\r\nb.txt")  # type: ignore[operator]
+    assert real == build("form-data", "a\r\nb.txt")
+    assert real.startswith("form-data; ")
+
+
+@pytest.mark.parametrize("name", [None, "..", "/"])
+@pytest.mark.parametrize("default", ["\uff44\uff4c", "\ufb01le", ""])
+def test_the_default_is_not_normalized_or_replaced(name: str | None, default: str) -> None:
+    assert safe_filename(name, default=default) == default
