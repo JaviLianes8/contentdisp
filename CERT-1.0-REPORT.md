@@ -149,11 +149,11 @@ that commit fails it.
 
 ## Gates (item 15)
 
-At b81458e on another machine from a fresh clone, each command on its own, with the
-fetched sources, Node.js, werkzeug, aiohttp, multipart, the 0.2.1 oracle,
-`CONTENTDISP_E2E=1` and `CONTENTDISP_E2E_PYPI=1`: `ruff format --check .`,
-`ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` (466 passed,
-no skip) all exit 0.
+Latest run at 4424d12 on the laptop (Python 3.14.6) from a fresh clone, each command on
+its own, with the fetched sources, Node.js, werkzeug, aiohttp, multipart, the 0.2.1
+oracle, `CONTENTDISP_E2E=1` and `CONTENTDISP_E2E_PYPI=1`: `ruff format --check .`,
+`ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` (688 passed,
+no skip) all exit 0. Earlier runs after each QA round are listed with that round below.
 
 ## QA lenses (item 19)
 
@@ -303,6 +303,12 @@ behaviour, API or doc change.
 New tests are in `tests/test_str_subclasses.py` (commit 93099af). Mutants re-run on this
 PC, each alone, against that file: P3, P5, P8, D7 and D13 each fail at least one new test,
 and the file passes on the unmutated code.
+
+Gates on the laptop (Python 3.14.6) from a clone of 4424d12, each on its own, with the
+fetched sources, Node.js, werkzeug, aiohttp, multipart, the 0.2.1 oracle,
+`CONTENTDISP_E2E=1` and `CONTENTDISP_E2E_PYPI=1`: `ruff format --check .`,
+`ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` all exit 0
+(688 passed, no skip).
 
 Re-verification of round 5 by the same lens: pending.
 
