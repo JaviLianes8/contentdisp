@@ -14,7 +14,7 @@ Progress:
 - [x] Packaging, e2e and upgrade from PyPI 0.2.1, every Python (items 8, 10, 13, 14)
 - [x] Author mutation round (item 18)
 - [x] Gates (item 15)
-- [ ] Five QA lenses report PASS (item 19): rounds 1 to 3 findings fixed, re-verification pending
+- [ ] Five QA lenses report PASS (item 19): rounds 1 to 4 findings fixed, re-verification pending
 - [ ] Independent reviewer reports PASS (item 16)
 - [x] PR #4 opened, trace guard CLEAN (item 17); merge and publish left to the maintainer
 
@@ -220,7 +220,34 @@ Gates on Elena's PC (Python 3.14.2) from a clone of b0c822f, each on its own:
 `ruff format --check .`, `ruff check .`, `mypy --strict src`, `mypy --strict src tests`
 and `pytest` all exit 0 (592 passed, 71 skipped without fetched files).
 
-Re-verification of round 3 by the same lenses: pending.
+Re-verification of round 3 by the same lenses: done in round 4.
+
+### Round 4 (lens e at 74d2c55)
+
+Lens e re-checked e/F1 to e/F3 (fixed: B1, B2, B8, B9, B10, U4 and S1 are killed) and ran
+26 mutants (19 new probes and the 7 re-checks) on Elena's PC (Python 3.14.2) and on this
+PC: 22 killed, B12 shown equivalent, three survivors (e/N1 to e/N3). None is disputed. All
+three are missing tests, not behaviour bugs: the code already uses the real characters, so
+the new tests pass on 74d2c55 and fail on the mutants. No behaviour, API or doc change.
+
+| Id | Finding | What changed |
+| --- | --- | --- |
+| e/N1 | No test pinned that `build` writes a parameter name from its plain copy (B13: `lower` called on the subclass) | A name whose real value is `Size` but whose `lower` returns text with CR LF is written as `size` |
+| e/N2 | No test pinned that `build` writes the type from its plain copy when the real value is valid (B15: `strip().lower()` on the subclass) | A type whose real value is ` Inline ` but whose `strip` and `lower` return CR LF text is written as `inline`, given as a `str` and as `ContentDisposition.type` |
+| e/N3 | No test pinned that `default` comes back unchanged when it holds whitespace or controls (D5: `default` stripped) | For `None`, `..` and `/`, the defaults `" dl "`, a tab and LF around `dl`, and NUL with U+202E around `dl` come back exactly |
+
+New tests are in `tests/test_str_subclasses.py` (commit 6bd7c4b). Mutants re-run on this PC,
+each alone, against that file: B13, B15 and D5 each fail at least one new test, and the
+file passes on the unmutated code.
+
+Gates on the laptop (Python 3.14.6) from a clone of 6bd7c4b, each on its own:
+`ruff format --check .`, `ruff check .`, `mypy --strict src`, `mypy --strict src tests`
+and `pytest` all exit 0 (604 passed, 71 skipped without fetched files). The pytest
+`--basetemp` must sit outside the scanned tree (a dot folder or another folder): placed in
+a plain subfolder of the clone, the files that the Windows names test creates are read by
+the docs tree scan, which then reports their invisible characters.
+
+Re-verification of round 4 by the same lens: pending.
 
 ## Independent review (item 16)
 
