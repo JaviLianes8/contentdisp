@@ -31,6 +31,16 @@ class _Default(str):
     pass
 
 
+class _LyingCase(str):
+    """Real characters are a valid token; strip and lower claim a header split."""
+
+    def strip(self, chars: str | None = None) -> str:
+        return "attachment\r\nSet-Cookie: x=1"
+
+    def lower(self) -> str:
+        return "x\r\nset-cookie: a"
+
+
 def test_a_name_overriding_iter_cannot_hide_a_newline() -> None:
     hidden = ContentDisposition("inline", {_HiddenIter("x\r\nSet-Cookie: a"): "v"})
     with pytest.raises(ContentDispositionError, match="parameter name must be a token"):
@@ -74,3 +84,19 @@ def test_the_default_comes_back_as_a_plain_str(name: str | None) -> None:
     assert result == "dl"
     assert type(result) is str
     assert safe_filename(name, default=_OtherStr("dl")) == "dl"
+
+
+def test_build_writes_the_real_name_not_what_lower_returns() -> None:
+    disposition = ContentDisposition("inline", {_LyingCase("Size"): "1"})
+    assert build(disposition) == 'inline; size="1"'
+
+
+@pytest.mark.parametrize("wrap", [lambda t: t, lambda t: ContentDisposition(t)])
+def test_build_writes_the_real_type_not_what_strip_or_lower_returns(wrap: object) -> None:
+    assert build(wrap(_LyingCase(" Inline "))) == "inline"  # type: ignore[operator]
+
+
+@pytest.mark.parametrize("name", [None, "..", "/"])
+@pytest.mark.parametrize("default", [" dl ", "\tdl\n", "\x00dl\u202e"])
+def test_the_default_keeps_its_whitespace_and_controls(name: str | None, default: str) -> None:
+    assert safe_filename(name, default=default) == default
