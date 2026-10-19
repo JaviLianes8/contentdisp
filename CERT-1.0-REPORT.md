@@ -155,6 +155,14 @@ oracle, `CONTENTDISP_E2E=1` and `CONTENTDISP_E2E_PYPI=1`: `ruff format --check .
 `ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` (855 passed,
 no skip) all exit 0. Earlier runs after each QA round are listed with that round below.
 
+Final run at ed92f3d (this report with the QA verdicts and the review, no code change since
+787adb6) on Elena's PC (Python 3.14.2) from a fresh clone of `release/1.0.0` from GitHub,
+with the same files, oracles and switches: `ruff format --check .`, `ruff check .`,
+`mypy --strict src` and `pytest` (855 passed, no skip) each exit 0; `python -m build`
+builds the sdist and the wheel and `twine check --strict` passes on both. The wheel
+installed in a throwaway venv (imported from its `site-packages`) runs the sdist's suite
+with `src` removed: 844 passed, 4 skipped (the four e2e tests, which build from the tree).
+
 ## QA lenses (item 19)
 
 ### QA verdicts
