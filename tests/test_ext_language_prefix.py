@@ -10,8 +10,10 @@ from langtag_oracle import GRANDFATHERED, language_tag_ok
 from contentdisp import ContentDispositionError, parse
 
 # Letters other than "x" play the same part in the tag grammar outside the grandfathered
-# tags, so tags over these characters (up to 9 long) give every start of up to 4.
-ALPHABET = "ax0-"
+# tags. "a" starts a grandfathered tag and "b" starts none, so a lone letter that only a
+# letter fill continues is covered too. No start of up to 6 needs more than 3 more
+# characters, so tags over these characters up to 9 long give every start of up to 6.
+ALPHABET = "abx0-"
 
 
 def _starts() -> set[str]:
@@ -26,7 +28,7 @@ def _starts() -> set[str]:
 
 STARTS = _starts()
 LANGUAGES = [
-    "".join(chars) for size in range(1, 5) for chars in itertools.product(ALPHABET, repeat=size)
+    "".join(chars) for size in range(1, 7) for chars in itertools.product(ALPHABET, repeat=size)
 ]
 
 
