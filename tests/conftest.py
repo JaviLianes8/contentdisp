@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import hashlib
 import html
 import json
@@ -11,19 +12,32 @@ import pytest
 UPSTREAM = Path(__file__).resolve().parent / "upstream"
 
 
+@functools.cache
+def _checked(name: str) -> bytes | None:
+    path = UPSTREAM / name
+    if not path.is_file():
+        return None
+    entry = json.loads((UPSTREAM / "MANIFEST.json").read_text(encoding="utf-8"))[name]
+    body = path.read_bytes()
+    assert hashlib.sha256(body).hexdigest() == entry["sha256"], f"{name} differs from MANIFEST"
+    return body
+
+
 def read_upstream(name: str) -> bytes:
     """Return a third-party test file, checked against tests/upstream/MANIFEST.json.
 
     The files are not committed: `python scripts/fetch_upstream.py` fetches them. Their
     tests skip while a file is absent and fail if it differs from the manifest.
     """
-    path = UPSTREAM / name
-    if not path.is_file():
+    body = _checked(name)
+    if body is None:
         pytest.skip(f"{name} is not fetched; run python scripts/fetch_upstream.py")
-    entry = json.loads((UPSTREAM / "MANIFEST.json").read_text(encoding="utf-8"))[name]
-    body = path.read_bytes()
-    assert hashlib.sha256(body).hexdigest() == entry["sha256"], f"{name} differs from MANIFEST"
     return body
+
+
+def upstream_text(name: str) -> str:
+    """A fetched specification as text (UTF-8)."""
+    return read_upstream(name).decode("utf-8")
 
 
 def _text(fragment: str) -> str:

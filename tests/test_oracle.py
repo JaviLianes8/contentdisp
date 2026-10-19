@@ -1,9 +1,10 @@
 """Strict mode against a grammar oracle on seeded random headers.
 
 The oracle below is a regular expression derived by hand from the RFC 6266 section 4.1
-ABNF, with token, quoted-string and OWS from RFC 9110 and ext-value from RFC 8187 (its
-language part simplified to letters, digits and hyphens). It is written independently of
-the parser: no code is shared.
+ABNF, with token, quoted-string and OWS from RFC 9110 and ext-value from RFC 8187, whose
+language part is checked by a walk over the RFC 5646 section 2.1 subtags written by hand.
+It is written independently of the parser: no code is shared. A name ending in "*" (even
+"*" alone) is read as an extended parameter, as the parser documents.
 """
 
 from __future__ import annotations
@@ -12,14 +13,17 @@ import random
 import re
 from urllib.parse import unquote_to_bytes
 
+from langtag_oracle import language_tag_ok
+
 from contentdisp import parse
 
 TCHAR = r"[!#$%&'*+\-.^_`|~0-9A-Za-z]"
 OWS = r"[ \t]*"
 QUOTED = r'"(?:[\t !#-\[\]-~\x80-\U0010ffff]|\\[\t -~\x80-\U0010ffff])*"'
 EXT = r"[A-Za-z0-9!#$%&+\-^_`{}~]+'[A-Za-z0-9\-]*'(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9!#$&+\-.^_`|~])*"
-PLAIN_NAME = rf"(?:{TCHAR}*[!#$%&'+\-.^_`|~0-9A-Za-z])"
-PARM = rf"(?:{PLAIN_NAME}{OWS}={OWS}(?:{TCHAR}+|{QUOTED})|{TCHAR}*\*{OWS}={OWS}{EXT})"
+# An ext-token is a token followed by "*" (RFC 6266 4.1), so "*" alone is a plain name.
+PLAIN_NAME = rf"(?:\*|{TCHAR}*[!#$%&'+\-.^_`|~0-9A-Za-z])"
+PARM = rf"(?:{PLAIN_NAME}{OWS}={OWS}(?:{TCHAR}+|{QUOTED})|{TCHAR}+\*{OWS}={OWS}{EXT})"
 HEADER = re.compile(rf"{OWS}{TCHAR}+(?:{OWS};{OWS}{PARM})*{OWS}")
 NAME = re.compile(rf";{OWS}({TCHAR}+){OWS}=")
 
@@ -58,6 +62,9 @@ PIECES = [
     "\u20ac",
     ",",
     "\r\n",
+    "UTF-8'en-US'%41",
+    "UTF-8'x-a'b",
+    "UTF-8'1'b",
     "a=b",
     '""',
     "foo.html",
@@ -67,6 +74,8 @@ PIECES = [
 
 NAMES = ["filename", "FileName", "name", "a*b", "filename*", "title*", "x"]
 VALUES = ["tok", '"a b"', '"a;b"', "UTF-8''%41", "ISO-8859-1''%85", "UTF-8''%C3", "x'y'z"]
+VALUES += ["UTF-8'de-CH-1901'%41", "utf-8'i-klingon'a", "UTF-8'en-a-bb-x-1'a", "UTF-8'en-'a"]
+VALUES += ["UTF-8''%0A", "UTF-8''%C2%85", "UTF-8''%09", "ISO-8859-1''%09", "UTF-8'-x'%G"]
 
 
 def _structured(rng: random.Random) -> str:
@@ -94,7 +103,7 @@ def _oracle(header: str) -> bool:
     names = [name.lower() for name in NAME.findall(_without_quoted(header))]
     if len(names) != len(set(names)):
         return False
-    return all(_ext_ok(value) for value in re.findall(rf"\*{OWS}={OWS}({EXT})", header))
+    return all(_ext_ok(value) for value in re.findall(rf"{TCHAR}\*{OWS}={OWS}({EXT})", header))
 
 
 def _without_quoted(header: str) -> str:
@@ -103,15 +112,21 @@ def _without_quoted(header: str) -> str:
 
 def _ext_ok(value: str) -> bool:
     charset, _, rest = value.partition("'")
-    octets = unquote_to_bytes(rest.partition("'")[2])
+    language, _, chars = rest.partition("'")
+    if language and not language_tag_ok(language):
+        return False
+    octets = unquote_to_bytes(chars)
     if charset.lower() == "utf-8":
         try:
-            octets.decode("utf-8")
+            text = octets.decode("utf-8")
         except UnicodeDecodeError:
             return False
-    if charset.lower() == "iso-8859-1":
-        return not any(0x80 <= octet <= 0x9F for octet in octets)
-    return True
+    elif charset.lower() == "iso-8859-1":
+        text = octets.decode("latin-1")
+    else:
+        return True
+    # Controls other than HTAB (C0, DEL and C1) are invalid in either charset.
+    return not any(char != "\t" and (char < " " or "\x7f" <= char <= "\x9f") for char in text)
 
 
 def test_strict_mode_accepts_exactly_what_the_oracle_accepts() -> None:

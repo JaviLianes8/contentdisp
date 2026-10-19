@@ -1,8 +1,9 @@
 # contentdisp
 
-Parse and build HTTP `Content-Disposition` headers per RFC 6266, with RFC 8187
-`filename*` handled correctly and a `safe_filename` helper that turns the advisory name
-into one you can write to disk.
+[![Lianes8 Certified](https://lianes8studio.com/certified/lianes8-certified-badge.svg)](https://lianes8studio.com/certified)
+
+Parse and build HTTP `Content-Disposition` headers per RFC 6266 and RFC 8187, and turn
+the file name a server offers into one that is safe to write to disk.
 
 Typed, no dependencies, Python 3.10+.
 
@@ -12,108 +13,107 @@ Typed, no dependencies, Python 3.10+.
 pip install contentdisp
 ```
 
-## Read a download's file name
+## Usage
 
 ```python
 from contentdisp import parse, safe_filename
 
-header = "attachment; filename=\"EURO rates\"; filename*=utf-8''%e2%82%ac%20rates"
-disposition = parse(header)
-print(disposition.type)  # attachment
-print(disposition.filename)  # € rates
-print(disposition.is_attachment)  # True
+# Read the file name a server offers: filename* wins over the plain fallback.
+disposition = parse("attachment; filename=\"EURO rates\"; filename*=utf-8''%e2%82%ac%20rates")
+print(disposition.type, disposition.filename, disposition.is_attachment)
+# attachment € rates True
+
+# Never trust it: keep a single harmless name.
+print(safe_filename("../../etc/passwd"), safe_filename("CON.txt"), safe_filename(None))
+# passwd _CON.txt download
 ```
 
-`filename*` wins over `filename` when both are present (RFC 6266 section 4.3). Only
-UTF-8 and ISO-8859-1 extended values are decoded; one that is malformed or in another
-charset is ignored, so the plain `filename` is used instead.
-
-## Never trust the name
-
-The file name comes from the server and is advisory. `safe_filename` keeps only the last
-path segment, removes control and invisible format characters (text-direction controls,
-zero-width spaces), replaces characters Windows refuses, neutralises device names such as
-`CON`, strips leading dots and caps the length at 255 UTF-8 bytes, keeping the extension.
-The `default` is returned as given when nothing usable is left:
-
-```python
-from contentdisp import parse, safe_filename
-
-print(safe_filename("../../etc/passwd"))  # passwd
-print(safe_filename(parse("attachment; filename*=UTF-8''%5cfoo.html").filename))  # foo.html
-print(safe_filename("CON.txt"))  # _CON.txt
-print(safe_filename(".htaccess"))  # htaccess
-print(safe_filename(parse("inline").filename, default="page.html"))  # page.html
-```
-
-## Lenient or strict
-
-By default `parse` never raises `ValueError`: it reads what it can, the way browsers do,
-and returns the same result as the strict mode on every valid header. Pass `strict=True`
-to reject anything outside the grammar, a repeated parameter or an undecodable
-`filename*`:
-
-```python
-from contentdisp import parse
-
-print(parse("attachment; filename=a; filename=b").filename)  # a
-try:
-    parse("attachment; filename=a; filename=b", strict=True)
-except ValueError as error:
-    print(error)  # parameter 'filename' appears more than once
-```
-
-Raw header bytes (as ASGI servers hand them over) are decoded as ISO-8859-1.
-
-## Build a header
+### Building a header
 
 ```python
 from contentdisp import build
 
-print(build("attachment", "report.pdf"))  # attachment; filename="report.pdf"
-print(build("attachment", "€.txt"))  # attachment; filename="_.txt"; filename*=UTF-8''%E2%82%AC.txt
-print(build("form-data", "résumé.pdf", name="cv"))  # form-data; filename="résumé.pdf"; name="cv"
+print(build("attachment", "report.pdf"))
+# attachment; filename="report.pdf"
+
+# A name the plain form cannot carry gets an ASCII fallback and an exact filename*.
+print(build("attachment", "€ rates.pdf"))
+# attachment; filename="_ rates.pdf"; filename*=UTF-8''%E2%82%AC%20rates.pdf
+
+# form-data never uses filename* (RFC 7578): the name stays UTF-8.
+print(build("form-data", "résumé.pdf", name="cv"))
+# form-data; filename="résumé.pdf"; name="cv"
 ```
 
-When the plain `filename` cannot carry the name exactly (non-ASCII, `\`, `"` or a `%41`
-style sequence, all things RFC 6266 Appendix D says to avoid there), `build` writes an
-ASCII fallback first and the exact name as UTF-8 `filename*`. Accented letters fall back
-to their base letter. For `form-data` no `filename*` is written, as RFC 7578 section 4.2
-requires: the name stays UTF-8, CR, LF and `"` are percent-escaped as browsers do, and so
-is a backslash, which would otherwise swallow the next parameter. Control characters, a
-type or parameter name that is not a token, and a parameter given twice raise
-`ValueError`, so a header can never be split.
+### Lenient or strict
 
-A multipart part header is UTF-8: decode it yourself and pass `str` to `parse`, whose
-strict mode accepts any non-ASCII character inside a quoted-string.
+```python
+from contentdisp import ContentDispositionError, parse
+
+# Default: read what can be read, as browsers do; the first of a repeated parameter wins.
+print(parse("attachment; filename=a.txt; filename=b.txt").filename)
+# a.txt
+
+# strict=True: the grammar exactly, with the position of the error in the header.
+try:
+    parse("attachment; filename=a.txt; filename=b.txt", strict=True)
+except ContentDispositionError as error:
+    print(error.position)
+# 28
+```
 
 ## API
 
 | Name | What it does |
 | --- | --- |
-| `parse(header, *, strict=False)` | `str` or `bytes` to `ContentDisposition`. |
-| `ContentDisposition` | Frozen value: `type`, `params`, `filename`, `is_attachment`. |
-| `build(type, filename=None, **params)` | Header value; keyword `_` becomes `-`. |
-| `safe_filename(name, *, default="download", max_bytes=255)` | Harmless file name. |
+| `parse(header, *, strict=False)` | `str` or `bytes` (read as ISO-8859-1) to a `ContentDisposition`. |
+| `ContentDisposition` | Frozen value: `type`, `params`, `filename` (prefers `filename*`), `is_attachment`. |
+| `build(type, /, filename=None, **params)` | Header value that cannot be split; keyword `_` becomes `-`; a `ContentDisposition` as `type` is written with its names as they are. |
+| `safe_filename(name, *, default="download", max_bytes=255)` | A single harmless file name, or `default`. |
+| `ContentDispositionError` | `ValueError` subclass with `position` (or `None`). Wrong argument types raise `TypeError`. |
 
-Not supported on purpose: RFC 2231 continuations (`filename*0`, `filename*1`), RFC 2047
-encoded words and percent-decoding of the plain `filename`. RFC 6266 does not adopt them
-and the browser test corpus checks that the last two are not applied.
+## Rules it follows
+
+Strict mode is the RFC 6266 grammar exactly, with token and quoted-string as RFC 9110
+defines them and `filename*` as RFC 8187 does, language tags included. The default mode
+gives the same result on every valid header and recovers what it can from the others,
+as RFC 6266 section 3 allows. Building follows the advice of RFC 6266 Appendix D, and
+`safe_filename` the security rules of its section 4.3. The
+[GUIDE](https://github.com/JaviLianes8/contentdisp/blob/main/GUIDE.md) has every rule in
+detail, and the [CHANGELOG](https://github.com/JaviLianes8/contentdisp/blob/main/CHANGELOG.md)
+what changed in each release.
 
 ## Why
 
-Clients get `filename*` wrong constantly: they skip the extended form, forget to
-percent-decode it, ignore the declared charset, or let a broken one replace a good
-fallback. Servers emit bare UTF-8 names, or let a newline from user input split the
-header. And almost nobody strips the path from the name before saving. `rfc6266` has
-been without a release for years, and `content-disposition` only generates response
-headers for Django. This library parses and builds the header, is checked against the
-RFC examples and every case of the browser test corpus, and makes the safe name the easy
-one to use.
+Reading this header right is easy to get wrong, and the Python tools around get it
+wrong in different ways. `werkzeug.http.parse_options_header` (werkzeug 3.1.9) lets
+whichever of `filename` and `filename*` comes last win, and returns no file name at all
+for `INLINE; FILENAME= "an example.html"`, an example from RFC 6266 itself. Python's
+`email` package reads the ASCII fallback of a header written the way RFC 6266 advises:
+`Message.get_filename` always returns the plain `filename`, and `EmailMessage` keeps
+whichever of the two comes first. `multipart` 2.0.1 ignores `filename*`. `aiohttp` picks
+`filename*` in either order, inside a whole HTTP framework. `rfc6266`, the package named
+after the RFC, has had no release since 2013 and no longer builds with current
+setuptools. And for saving the file, `werkzeug.utils.secure_filename("東京.txt")`
+returns `"txt"`.
+
+`contentdisp` is small, typed and dependency-free: it parses strictly or leniently,
+builds headers that cannot be split, and makes the safe file name the easy one. It is
+tested against the specifications themselves, the browser test corpus RFC 6266 points
+to, Chromium's own expectations, the jshttp parsers that Express uses, Microsoft's file
+naming rules and Windows itself.
+
+## Development
+
+`python scripts/fetch_upstream.py` downloads the specifications and test data listed in
+`tests/upstream/MANIFEST.json` (they are not part of the repository; their tests skip
+without them). `pip install werkzeug aiohttp multipart` and Node.js add the reference
+parsers. `scripts/check.ps1` runs format, lint, types and tests. Set `CONTENTDISP_E2E=1`
+to also build the wheel and test the installed package.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/JaviLianes8/contentdisp/blob/main/LICENSE).
 
 ## Links
 

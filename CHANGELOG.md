@@ -6,6 +6,120 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-19
+
+The public API is now stable: the five names in `contentdisp.__all__`, their signatures,
+defaults and error types follow Semantic Versioning from this release on.
+
+### Stable
+
+- `parse` reads a header strictly (`strict=True`, the RFC 6266 grammar with RFC 9110,
+  RFC 8187 and RFC 5646 rules) or leniently (the default: the same result on every valid
+  header, recovery on the others), and returns a `ContentDisposition`.
+- `ContentDisposition` with `type`, `params`, `filename` and `is_attachment`.
+- `build` writes a header that cannot be split, following RFC 6266 Appendix D, and
+  RFC 7578 for `form-data`; given a `ContentDisposition`, it writes that value again,
+  unless its type is not a token, a name ends in `*` or a value holds a control
+  character or a lone surrogate.
+- `safe_filename` reduces an advisory name to one safe to create in a folder.
+- `ContentDispositionError` (a `ValueError`) for invalid values, with the `position` of
+  the error in the header for strict parsing (see the GUIDE); `TypeError` for arguments of the
+  wrong type.
+
+### Changed
+
+- `build` takes its type positional only, so `type` can be a keyword parameter
+  (`build("attachment", type="x")` raised `TypeError`; `build(type="attachment")` now
+  does). It also takes a `ContentDisposition` in place of the type and writes its
+  parameters with their names as they are, so a parsed header is written again with
+  `build(parse(header))`, names with `_` included (keywords still turn `_` into `-`).
+  Headers whose type is not a token (lenient parsing only) or whose values hold a
+  control character (a C1 control is legal obs-text for strict parsing) or a lone
+  surrogate (a `str` header can carry one, and parsing takes it as obs-text) are refused
+  with `ContentDispositionError`, and so are names ending in `*`, which parsing returns
+  for an extended parameter whose own name ends in `*` (`a**=UTF-8''x` gives `a*`). A
+  parameter name of a `ContentDisposition` that is not a `str` raises `TypeError`.
+- A parameter named `*` alone is an ordinary parameter, as RFC 6266 defines an extended
+  name as a token followed by `*`: `attachment; *=foo` gives `{'*': 'foo'}` in both modes
+  (strict parsing refused it, lenient parsing dropped it, and `*=UTF-8''x` was stored
+  under the empty name), and `build` writes it. `**` is its extended form.
+- `build` reports a lone surrogate as `a lone surrogate`, no longer as a control
+  character.
+- `safe_filename` and the ASCII fallback of `build` drop every non-starter (a character
+  with a non-zero canonical combining class) after the 30th in a run (counted on the
+  NFKD decomposition) before normalising, so hostile names take linear time. The limit
+  is the one of the Unicode Stream-Safe Text Format (UAX #15), which instead keeps the
+  non-starters and splits the run with U+034F.
+- `safe_filename` and `build` work on a plain copy of a `str` subclass, so overriding
+  `__iter__` can no longer hide a control character from `build`. `safe_filename`
+  always returns a plain `str`, `default` included (a `str` subclass given as `default`
+  used to come back as that subclass).
+- Every `ValueError` the library raises is now a `ContentDispositionError`, a subclass,
+  so `except ValueError` keeps working.
+- An extended value whose decoded text holds a control other than HTAB (U+0000 to
+  U+0008, U+000A to U+001F, U+007F to U+009F) is invalid, in UTF-8 as in ISO-8859-1:
+  ISO/IEC 8859-1 has no graphic character there, `build` refuses the same characters,
+  and a file name is no longer valid or not by its charset label alone. Strict parsing
+  raises at the start of the value (message `control character in extended value`)
+  and lenient parsing ignores the parameter, so a plain `filename` wins.
+  `filename*=UTF-8''a%0D%0Ab` used to give a name holding a raw CR LF in both modes,
+  and `%00` a NUL, in either charset. HTAB is still decoded, as a quoted-string takes it.
+- Strict parsing checks the language part of an extended value against the RFC 5646
+  grammar that RFC 8187 refers to (`UTF-8'1'a` used to pass), and reports a malformed
+  tag at its start even when a later character of the value breaks the grammar too.
+  A language part that is not closed by its `'` is reported at its first character
+  that no tag can continue with (`UTF-8'-en` at the `-`, `UTF-8'1en` at the `1`), not at
+  the end of the part; lenient parsing still skips any language made of letters, digits
+  and hyphens.
+- Strict error offsets count from the start of the header as given; they used to count
+  from the header without its leading spaces. Messages end with `at offset N`.
+- `is_attachment` is false for a type that is not a token, which only lenient parsing
+  produces (an empty header, `"attachment"` in quotes, a header without a type): RFC 6266
+  section 3 ignores invalid headers, and Chrome treats them as inline. It used to be
+  true. `inline` is now also recognised without case on a value built by hand.
+- Lenient parsing reads a header without a type (`filename=report.pdf`) as browsers do:
+  the text before the first `;` stays the type and is also read as a parameter.
+- `safe_filename` normalises again after removing invisible characters, so its result
+  is always NFKC and passing it again returns it unchanged (`C`, zero-width space,
+  combining acute gave `C` plus the combining accent; now `Ć`).
+- `safe_filename` checks its arguments first: `max_bytes` must be an `int` (not a `bool`)
+  of at least 1 whatever the name (`safe_filename(None, max_bytes=0)` returned the
+  default), `default` a `str` and `name` a `str` or `None`, each with a `TypeError`.
+- `ContentDisposition` refuses fields that are not `str` (`params` must be a `dict` of
+  `str` to `str`) with `TypeError`.
+- `ContentDisposition` shows and pickles as `contentdisp.ContentDisposition` instead of
+  the private module; pickles made by 0.2.1 still load.
+
+### Fixed
+
+- `safe_filename` and `build` took quadratic time on a long run of combining marks of
+  alternating classes (U+0316 U+0301 ...) or of characters that decompose into marks
+  (U+0F73): a 64 KB name took over a second. Both are now linear.
+- Error messages quote at most 40 characters of any input and never an extended value;
+  a huge header, type or name used to be quoted whole.
+- Lenient parsing checks a parameter name before lower-casing it, so the Kelvin sign no
+  longer passes as `k`.
+- A strict quoted-string cut off right after a backslash is reported as unterminated, at
+  the end of the header.
+- `parse` works on a plain copy of a `str` or `bytes` subclass: overriding `replace`
+  let lenient parsing return raw CR and LF, and a `decode` that returned something else
+  raised `AttributeError`.
+- An argument of the wrong type whose class has a `__name__` that raises (through a
+  metaclass) gets the documented `TypeError`; `parse` and `build` raised the class's own
+  error.
+
+### Added
+
+- `ContentDispositionError`, a `ValueError` subclass with the `position` of the error
+  in the header for strict parsing, raised for every invalid value.
+- Runnable examples in every public docstring, run as doctests, and a GUIDE.
+- Tests against the RFC 6266, RFC 8187, RFC 9110, RFC 5646, RFC 5234 and RFC 7578 texts
+  as fetched by `scripts/fetch_upstream.py` (grammar rules compiled from the text), the tc2231 corpus,
+  Chromium's unit test expectations, Microsoft's file naming rules, the HTML standard's
+  form-data rule, the jshttp `content-disposition` 1.0.1 and 3.0.0 parsers run with
+  Node.js, werkzeug, aiohttp, multipart, Python's `email` and `ntpath.isreserved`, real
+  files created on Windows, and the 0.2.1 release; seeded fuzz and hostile input tests.
+
 ## [0.2.1] - 2026-10-13
 
 ### Changed

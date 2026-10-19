@@ -4,18 +4,17 @@ build-backend = "hatchling.build"
 
 [project]
 name = "contentdisp"
-version = "0.2.1"
+version = "1.0.0"
 description = "Parse and build HTTP Content-Disposition headers per RFC 6266 and RFC 8187, with safe file names"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Javier Lianes", email = "javier@lianes8studio.com" }]
-keywords = ["content-disposition", "http", "header", "rfc6266", "rfc8187", "rfc5987", "filename", "attachment", "download", "path traversal", "typed"]
+keywords = ["content-disposition", "http", "header", "rfc6266", "rfc8187", "rfc5987", "rfc7578", "filename", "attachment", "download", "form-data", "path traversal", "sanitize", "typed"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
@@ -23,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: Software Development :: Libraries",
     "Typing :: Typed",
@@ -30,11 +30,11 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["ruff", "mypy", "pytest", "build", "twine"]
+dev = ["ruff", "mypy", "pytest", "pytest-timeout", "build", "twine"]
 
 [project.urls]
 Homepage = "https://lianes8studio.com"
-Repository = "https://github.com/JaviLianes8/contentdisp"
+Source = "https://github.com/JaviLianes8/contentdisp"
 Issues = "https://github.com/JaviLianes8/contentdisp/issues"
 Changelog = "https://github.com/JaviLianes8/contentdisp/blob/main/CHANGELOG.md"
 LinkedIn = "https://www.linkedin.com/in/jlianes/"
@@ -50,7 +50,9 @@ include = [
     "tests/*.py",
     "tests/upstream/MANIFEST.json",
     "scripts/fetch_upstream.py",
+    "scripts/jshttp_oracle.mjs",
     "CHANGELOG.md",
+    "GUIDE.md",
     "README.md",
     "LICENSE",
     "pyproject.toml",
@@ -68,6 +70,7 @@ python_version = "3.10"
 strict = true
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["src"]
-addopts = "-q"
+testpaths = ["src", "tests"]
+pythonpath = ["src", "tests"]
+addopts = "-q --doctest-modules"
+timeout = 300

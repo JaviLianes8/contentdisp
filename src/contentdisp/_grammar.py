@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import string
 
+from ._errors import ContentDispositionError
+
 # RFC 9110 5.6.2: any VCHAR except the delimiters.
 TCHAR = frozenset(string.ascii_letters + string.digits + "!#$%&'*+-.^_`|~")
 OWS = " \t"
@@ -12,6 +14,11 @@ OWS = " \t"
 def is_token(text: str) -> bool:
     """True when ``text`` is one or more tchar."""
     return bool(text) and all(char in TCHAR for char in text)
+
+
+def is_ext_name(name: str) -> bool:
+    """True for an RFC 6266 ext-token: a token followed by ``*`` (so ``*`` alone is not)."""
+    return len(name) > 1 and name.endswith("*")
 
 
 def skip_ows(text: str, pos: int) -> int:
@@ -42,8 +49,9 @@ def read_quoted(text: str, pos: int, *, strict: bool) -> tuple[str, int]:
     """Read the quoted-string that starts at ``text[pos]`` (a DQUOTE).
 
     Returns the unescaped content and the index after the closing quote. In strict mode
-    a character outside the grammar or a missing closing quote raises ``ValueError``;
-    otherwise the string runs to the end of the text and odd characters are kept.
+    a character outside the grammar or a missing closing quote raises
+    ``ContentDispositionError`` with its index in ``text``; otherwise the string runs to
+    the end of the text and odd characters are kept.
     """
     out: list[str] = []
     pos += 1
@@ -51,18 +59,24 @@ def read_quoted(text: str, pos: int, *, strict: bool) -> tuple[str, int]:
         char = text[pos]
         if char == '"':
             return "".join(out), pos + 1
-        if char == "\\" and pos + 1 < len(text):
+        if char == "\\":
+            if pos + 1 == len(text):
+                break  # a quoted-pair cut off by the end of the text
             char = text[pos + 1]
             if strict and not _pair_char(char):
-                raise ValueError(f"invalid quoted-pair at offset {pos}")
+                raise error(f"invalid quoted-pair {char!r}", pos + 1)
             out.append(char)
             pos += 2
             continue
         if strict and not _qdtext(char):
-            raise ValueError(f"invalid character {char!r} in quoted-string at offset {pos}")
-        if char != "\\":
-            out.append(char)
+            raise error(f"invalid character {char!r} in quoted-string", pos)
+        out.append(char)
         pos += 1
     if strict:
-        raise ValueError("unterminated quoted-string")
-    return "".join(out), pos
+        raise error("unterminated quoted-string", len(text))
+    return "".join(out), len(text)
+
+
+def error(message: str, position: int) -> ContentDispositionError:
+    """A parse error at ``position`` of the header, with the offset in its message."""
+    return ContentDispositionError(f"{message} at offset {position}", position=position)
