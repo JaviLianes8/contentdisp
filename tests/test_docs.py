@@ -50,7 +50,7 @@ def test_every_readme_example_runs_and_prints_its_comment() -> None:
 
 def test_every_guide_example_runs_and_prints_its_comment() -> None:
     assert len(_python_blocks(GUIDE)) == 5
-    assert _run_blocks(GUIDE) == 13
+    assert _run_blocks(GUIDE) == 14
 
 
 def test_every_print_in_the_docs_shows_its_output() -> None:

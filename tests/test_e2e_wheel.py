@@ -92,7 +92,7 @@ def test_wheel_contents_and_metadata(dist: Path) -> None:
     archive = zipfile.ZipFile(wheel)
     names = archive.namelist()
     modules = ["__init__", "_build", "_errors", "_ext_value", "_grammar", "_langtag"]
-    modules += ["_model", "_parse", "_safe"]
+    modules += ["_model", "_parse", "_safe", "_unicode"]
     package = sorted(n for n in names if n.startswith("contentdisp/"))
     assert package == sorted([f"contentdisp/{m}.py" for m in modules] + ["contentdisp/py.typed"])
     others = {n.split("/", 1)[1] for n in names if not n.startswith("contentdisp/")}

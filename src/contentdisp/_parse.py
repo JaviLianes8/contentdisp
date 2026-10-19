@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ._errors import ContentDispositionError, show, type_name
 from ._ext_value import UnsupportedCharsetError, decode_ext_value
-from ._grammar import OWS, error, is_token, read_quoted, read_token, skip_ows
+from ._grammar import OWS, error, is_ext_name, is_token, read_quoted, read_token, skip_ows
 from ._model import ContentDisposition
 
 
@@ -26,8 +26,8 @@ def parse(header: str | bytes, *, strict: bool = False) -> ContentDisposition:
     raises ``ContentDispositionError``: it skips parameters it cannot read, ignores a
     ``name*`` value that does not decode (so a plain fallback wins), keeps the first of
     repeated parameters and replaces CR, LF and NUL with a space (RFC 9110 5.5). The type
-    is the text before the first ``;``, whatever it holds; when that text has the form
-    ``name=value`` (a header without a type) it is read as a parameter too.
+    is the text before the first ``;`` outside quotes, whatever it holds; when that text
+    has the form ``name=value`` (a header without a type) it is read as a parameter too.
 
     >>> from contentdisp import parse
     >>> parse("attachment; filename=\\"EURO rates\\"; filename*=utf-8''%e2%82%ac%20rates")
@@ -75,7 +75,7 @@ def _parse_strict(header: str) -> ContentDisposition:
         if name in seen:
             raise error(f"parameter {show(name)} appears more than once", start)
         seen.add(name)
-        if name.endswith("*"):
+        if is_ext_name(name):
             value_start = pos
             while pos < len(header) and header[pos] not in OWS + ";":
                 pos += 1
@@ -112,7 +112,7 @@ def _parse_lenient(header: str) -> ContentDisposition:
         if not equals or not is_token(raw_name) or name in seen:
             continue
         value = value.strip(OWS)
-        if name.endswith("*"):
+        if is_ext_name(name):
             try:
                 pairs.append((name, decode_ext_value(value, strict=False)))
             except ContentDispositionError:
@@ -127,8 +127,8 @@ def _parse_lenient(header: str) -> ContentDisposition:
 
 def _resolve(disposition_type: str, pairs: list[tuple[str, str]]) -> ContentDisposition:
     # RFC 6266 4.3 and RFC 8187 4.2: the extended form takes precedence over the plain one.
-    params = {name: value for name, value in pairs if not name.endswith("*")}
-    params.update((name[:-1], value) for name, value in pairs if name.endswith("*"))
+    params = {name: value for name, value in pairs if not is_ext_name(name)}
+    params.update((name[:-1], value) for name, value in pairs if is_ext_name(name))
     return ContentDisposition(type=disposition_type, params=params)
 
 

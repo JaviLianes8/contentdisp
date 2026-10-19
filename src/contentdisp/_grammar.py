@@ -16,6 +16,11 @@ def is_token(text: str) -> bool:
     return bool(text) and all(char in TCHAR for char in text)
 
 
+def is_ext_name(name: str) -> bool:
+    """True for an RFC 6266 ext-token: a token followed by ``*`` (so ``*`` alone is not)."""
+    return len(name) > 1 and name.endswith("*")
+
+
 def skip_ows(text: str, pos: int) -> int:
     while pos < len(text) and text[pos] in OWS:
         pos += 1

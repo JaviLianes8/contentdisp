@@ -6,6 +6,7 @@ import re
 import unicodedata
 
 from ._errors import ContentDispositionError, type_name
+from ._unicode import normalize
 
 # Characters Windows refuses in names; ":" also opens NTFS alternate data streams.
 _RESERVED = re.compile(r'[<>:"|?*]')
@@ -21,7 +22,8 @@ _TRAILING = " ."
 def safe_filename(name: str | None, *, default: str = "download", max_bytes: int = 255) -> str:
     """Reduce ``name`` to a single, harmless file name, as RFC 6266 section 4.3 asks.
 
-    The name is NFKC-normalised (so full-width slashes become real ones), cut to its last
+    The name is NFKC-normalised (so full-width slashes become real ones; a run of more
+    than 30 combining marks is cut to 30, the Unicode Stream-Safe limit), cut to its last
     ``/`` or ``\\`` segment, and stripped of control and invisible format characters
     (bidi controls, zero-width spaces); other whitespace becomes a space. Windows-reserved
     characters become ``_``. Leading dots, tildes, hyphens, spaces and combining marks
@@ -51,11 +53,11 @@ def safe_filename(name: str | None, *, default: str = "download", max_bytes: int
         return default
     if not isinstance(name, str):
         raise TypeError(f"name must be a str or None, not {type_name(name)}")
-    text = unicodedata.normalize("NFKC", name)
+    text = normalize("NFKC", name)
     text = re.split(r"[/\\]", text)[-1]
     # Removing invisible characters can leave pairs that compose ("C", U+0301): normalise
     # again so the result is NFKC and passing it again changes nothing.
-    text = unicodedata.normalize("NFKC", "".join(_clean(char) for char in text))
+    text = normalize("NFKC", "".join(_clean(char) for char in text))
     text = _RESERVED.sub("_", text)
     text = _trim(_truncate(_trim(text), max_bytes))
     if _DEVICE.fullmatch(text.split(".", 1)[0].rstrip(" ")):

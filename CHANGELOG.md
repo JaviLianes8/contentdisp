@@ -18,7 +18,7 @@ defaults and error types follow Semantic Versioning from this release on.
   header, recovery on the others), and returns a `ContentDisposition`.
 - `ContentDisposition` with `type`, `params`, `filename` and `is_attachment`.
 - `build` writes a header that cannot be split, following RFC 6266 Appendix D, and
-  RFC 7578 for `form-data`.
+  RFC 7578 for `form-data`; given a `ContentDisposition`, it writes that value again.
 - `safe_filename` reduces an advisory name to one safe to create in a folder.
 - `ContentDispositionError` (a `ValueError`) for invalid values, with the `position` of
   the first offending character for strict parsing; `TypeError` for arguments of the
@@ -26,6 +26,19 @@ defaults and error types follow Semantic Versioning from this release on.
 
 ### Changed
 
+- `build` takes its type positional only, so `type` can be a keyword parameter
+  (`build("attachment", type="x")` raised `TypeError`; `build(type="attachment")` now
+  does). It also takes a `ContentDisposition` in place of the type and writes its
+  parameters with their names as they are, so a parsed header is written again with
+  `build(parse(header))`, names with `_` included (keywords still turn `_` into `-`).
+- A parameter named `*` alone is an ordinary parameter, as RFC 6266 defines an extended
+  name as a token followed by `*`: `attachment; *=foo` gives `{'*': 'foo'}` in both modes
+  (strict parsing refused it, lenient parsing dropped it, and `*=UTF-8''x` was stored
+  under the empty name), and `build` writes it. `**` is its extended form.
+- `build` reports a lone surrogate as `a lone surrogate`, no longer as a control
+  character.
+- `safe_filename` cuts a run of more than 30 combining marks to 30 before normalising, as
+  the Unicode Stream-Safe Text Format does.
 - Every `ValueError` the library raises is now a `ContentDispositionError`, a subclass,
   so `except ValueError` keeps working.
 - Strict parsing checks the language part of an extended value against the RFC 5646
@@ -47,11 +60,14 @@ defaults and error types follow Semantic Versioning from this release on.
   default), `default` a `str` and `name` a `str` or `None`, each with a `TypeError`.
 - `ContentDisposition` refuses fields that are not `str` (`params` must be a `dict` of
   `str` to `str`) with `TypeError`.
-- `ContentDisposition` and `ContentDispositionError` show and pickle as
-  `contentdisp.<Name>` instead of the private module; pickles made by 0.2.1 still load.
+- `ContentDisposition` shows and pickles as `contentdisp.ContentDisposition` instead of
+  the private module; pickles made by 0.2.1 still load.
 
 ### Fixed
 
+- `safe_filename` and `build` took quadratic time on a long run of combining marks of
+  alternating classes (U+0316 U+0301 ...) or of characters that decompose into marks
+  (U+0F73): a 64 KB name took over a second. Both are now linear.
 - Error messages quote at most 40 characters of any input and never an extended value;
   a huge header, type or name used to be quoted whole.
 - Lenient parsing checks a parameter name before lower-casing it, so the Kelvin sign no
@@ -61,9 +77,11 @@ defaults and error types follow Semantic Versioning from this release on.
 
 ### Added
 
+- `ContentDispositionError`, a `ValueError` subclass with the `position` of the first
+  offending character for strict parsing, raised for every invalid value.
 - Runnable examples in every public docstring, run as doctests, and a GUIDE.
 - Tests against the RFC 6266, RFC 8187, RFC 9110, RFC 5646, RFC 5234 and RFC 7578 texts
-  fetched at test time (grammar rules compiled from the text), the tc2231 corpus,
+  as fetched by `scripts/fetch_upstream.py` (grammar rules compiled from the text), the tc2231 corpus,
   Chromium's unit test expectations, Microsoft's file naming rules, the HTML standard's
   form-data rule, the jshttp `content-disposition` 1.0.1 and 3.0.0 parsers run with
   Node.js, werkzeug, aiohttp, multipart, Python's `email` and `ntpath.isreserved`, real

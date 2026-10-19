@@ -19,8 +19,9 @@ defines it, its language part an RFC 5646 language tag.
 - Spaces and tabs may surround the value and every `;` and `=`; CR, LF and NUL may not
   appear anywhere (RFC 9110 section 5.5).
 - A value is a token or a quoted-string; a name ending in `*` takes an extended value
-  (`charset'language'value`), never a quoted one. `*` alone counts as such a name, and
-  its value is stored under the empty name.
+  (`charset'language'value`), never a quoted one. RFC 6266 defines that name as a token
+  followed by `*`, so `*` alone is an ordinary name with an ordinary value, and `**` is
+  its extended form.
 - A parameter given twice is an error (names compare without case; `filename` and
   `filename*` are different names).
 - In a `str`, every character above U+00FF counts as `obs-text`: the text was decoded
@@ -98,9 +99,15 @@ print(ContentDisposition("attachment", {"filename": "a.pdf"}).filename)
 
 ## Writing a header: `build`
 
-`build(type, filename=None, **params)` returns the field value. The type is lower-cased
-(surrounding whitespace removed); keyword names use `-` for `_` and are lower-cased;
-every value is written as a quoted-string, in the order given, `filename` first.
+`build(type, /, filename=None, **params)` returns the field value. The type is
+lower-cased (surrounding whitespace removed); keyword names use `-` for `_` and are
+lower-cased; every value is written as a quoted-string, in the order given, `filename`
+first. The type is positional only, so `type` itself can be a keyword parameter.
+
+In place of the type, `build` takes a `ContentDisposition`: its type and parameters are
+written first, names as they are (lower-cased), then `filename` and the keywords. This
+writes a parsed header again, `build(parse(header))`, and reaches the names a keyword
+cannot spell, such as `x_y` or `*`.
 
 Following RFC 6266 Appendix D, when the plain form cannot carry a value faithfully
 (non-ASCII, a `\` or `"`, or a `%` followed by two hex digits, which some agents decode)
@@ -114,13 +121,13 @@ browsers to do. `build` also writes a backslash as `%5C`, one escape more than b
 left raw, it would escape the closing quote for an RFC 9110 parser and swallow the next
 parameter. A receiver that only decodes the browser escapes sees `%5C`.
 
-A type or name that is not a token, a name ending in `*`, a name given twice, and a value
-holding a control character other than tab (CR and LF are escaped for `form-data`) or a
-lone surrogate raise `ContentDispositionError`; a non-`str` argument raises `TypeError`.
-No value can split the header.
+A type or name that is not a token, an extended name (a token followed by `*`), a name
+given twice, and a value holding a control character other than tab (CR and LF are
+escaped for `form-data`) or a lone surrogate raise `ContentDispositionError`; an argument
+of the wrong type raises `TypeError`. No value can split the header.
 
 ```python
-from contentdisp import ContentDispositionError, build
+from contentdisp import ContentDispositionError, build, parse
 
 print(build("attachment", "naïve 100%41.txt", creation_date="Wed, 12 Feb 1997"))
 # attachment; filename="naive 100_41.txt"; filename*=UTF-8''na%C3%AFve%20100%2541.txt; creation-date="Wed, 12 Feb 1997"
@@ -131,6 +138,8 @@ try:
 except ContentDispositionError as error:
     print(error)
 # parameter 'filename' contains a control character: '\r'
+print(build(parse("Attachment; x_y=1; type=2")))
+# attachment; x_y="1"; type="2"
 ```
 
 ## Saving the file: `safe_filename`
@@ -138,12 +147,14 @@ except ContentDispositionError as error:
 `safe_filename(name, *, default="download", max_bytes=255)` applies the rules of RFC
 6266 section 4.3 and Microsoft's file naming rules, in this order:
 
-1. NFKC normalisation, so full-width slashes and dots become real ones.
+1. NFKC normalisation, so full-width slashes and dots become real ones. A run of more
+   than 30 combining marks is cut to 30 first, as the Unicode Stream-Safe Text Format
+   (UAX #15) does, which keeps the time linear on hostile names.
 2. Only the text after the last `/` or `\` is kept.
 3. Control characters, lone surrogates and invisible format characters (bidi controls,
    zero-width spaces, soft hyphens) are removed, except the joiners inside emoji and
-   scripts; other whitespace becomes a space. Then NFKC again, so the result is
-   normalised.
+   scripts; other whitespace becomes a space. Then NFKC again (with the same cut), so
+   the result is normalised.
 4. `< > : " | ? *` become `_` (`:` would also open an NTFS stream).
 5. Leading spaces, dots, `~`, `-`, joiners and combining marks go, and trailing spaces
    and dots.
@@ -174,7 +185,7 @@ print(safe_filename("..", default="file.bin"), safe_filename("x" * 300 + ".tar.g
 | Error | Raised by | When |
 | --- | --- | --- |
 | `ContentDispositionError` | `parse(..., strict=True)` | the header breaks the grammar; `position` is set |
-| `ContentDispositionError` | `build` | a type or name is not a token, a name repeats or ends in `*`, a value holds a control character |
+| `ContentDispositionError` | `build` | a type or name is not a token, a name repeats or is an extended name, a value holds a control character or a lone surrogate |
 | `ContentDispositionError` | `safe_filename` | `max_bytes` is below 1 |
 | `TypeError` | all | an argument has the wrong type |
 

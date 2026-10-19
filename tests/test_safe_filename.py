@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import unicodedata
+
 import pytest
 
 from contentdisp import safe_filename
@@ -136,3 +138,27 @@ def test_the_cut_without_extension_is_trimmed_again() -> None:
 
 def test_the_default_is_returned_as_given() -> None:
     assert safe_filename("..", default="download", max_bytes=3) == "download"
+
+
+def test_an_extension_of_sixteen_bytes_is_kept_and_of_seventeen_dropped() -> None:
+    assert safe_filename("a" * 300 + "." + "b" * 15) == "a" * 239 + "." + "b" * 15
+    assert safe_filename("a" * 300 + "." + "b" * 16) == "a" * 255
+
+
+def test_an_extension_may_take_half_of_a_small_budget() -> None:
+    assert safe_filename("x" * 30 + ".abcdefghi", max_bytes=20) == "x" * 10 + ".abcdefghi"
+    assert safe_filename("x" * 30 + ".abcdefghij", max_bytes=20) == "x" * 20
+
+
+def test_a_run_of_combining_marks_is_cut_to_thirty() -> None:
+    # The Stream-Safe limit of UAX #15: longer runs would make normalisation quadratic.
+    kept = unicodedata.normalize("NFKC", "a" + "\u0301" * 30)
+    assert safe_filename("a" + "\u0301" * 30) == kept
+    assert safe_filename("a" + "\u0301" * 31) == kept
+    assert safe_filename("a" + ("\u0301" * 30 + "\u200b") * 3) == kept
+
+
+def test_marks_hidden_in_a_decomposition_count_towards_the_run() -> None:
+    # U+0F73 is a starter that decomposes into two marks.
+    expected = unicodedata.normalize("NFKC", "a" + "\u0f73" * 15)
+    assert safe_filename("a" + "\u0f73" * 40) == expected

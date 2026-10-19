@@ -71,6 +71,9 @@ BUILDS: dict[str, Callable[[int], Callable[[], object]]] = {
     "percent signs": lambda n: lambda: build("attachment", "%41" * (n // 3)),
     "form-data": lambda n: lambda: build("form-data", '"\r\n\\' * (n // 4), name="f"),
     "many params": lambda n: lambda: build("attachment", **{f"p{i}": "v" for i in range(n // 20)}),
+    # Marks of two alternating classes, which an unbounded normalisation sorts in O(n^2).
+    "alternating marks": lambda n: lambda: build("attachment", "a" + "\u0316\u0301" * (n // 2)),
+    "decomposing marks": lambda n: lambda: build("attachment", "a" + "\u0f73" * n),
 }
 
 
@@ -87,6 +90,9 @@ NAMES: dict[str, Callable[[int], str]] = {
     "invisible": lambda n: "\u200b" * n + "a",
     "expanding": lambda n: "\ufdfa" * (n // 18),
     "joiners": lambda n: "\u200d" * n + ".env",
+    "alternating marks": lambda n: "a" + "\u0316\u0301" * (n // 2),
+    "decomposing marks": lambda n: "a" + "\u0f73" * n,
+    "marks split by invisibles": lambda n: "a" + ("\u0316\u0301" * 15 + "\u200b") * (n // 31),
 }
 
 

@@ -16,7 +16,8 @@ from contentdisp import ContentDisposition, ContentDispositionError, build, pars
 
 SIGNATURES = {
     "parse": "(header: 'str | bytes', *, strict: 'bool' = False) -> 'ContentDisposition'",
-    "build": "(type: 'str', filename: 'str | None' = None, **params: 'str') -> 'str'",
+    "build": "(type: 'str | ContentDisposition', /, filename: 'str | None' = None, "
+    "**params: 'str') -> 'str'",
     "safe_filename": "(name: 'str | None', *, default: 'str' = 'download', "
     "max_bytes: 'int' = 255) -> 'str'",
 }
@@ -146,6 +147,18 @@ def test_invalid_values_raise_the_library_error(call: Callable[[], object]) -> N
     with pytest.raises(ContentDispositionError) as caught:
         call()
     assert caught.value.position is None or caught.value.position >= 0
+
+
+class _BadRepr:
+    def __repr__(self) -> str:
+        raise RuntimeError("repr failed")
+
+
+def test_a_failing_repr_never_hides_the_type_error() -> None:
+    with pytest.raises(TypeError, match="params must map str to str, not 'a': <_BadRepr>"):
+        ContentDisposition("a", {"a": _BadRepr()})  # type: ignore[dict-item]
+    with pytest.raises(TypeError, match="not <_BadRepr>: 'x'"):
+        ContentDisposition("a", {_BadRepr(): "x"})  # type: ignore[dict-item]
 
 
 def test_only_parse_errors_carry_a_position() -> None:

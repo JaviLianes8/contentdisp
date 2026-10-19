@@ -68,7 +68,7 @@ except ContentDispositionError as error:
 | --- | --- |
 | `parse(header, *, strict=False)` | `str` or `bytes` (read as ISO-8859-1) to a `ContentDisposition`. |
 | `ContentDisposition` | Frozen value: `type`, `params`, `filename` (prefers `filename*`), `is_attachment`. |
-| `build(type, filename=None, **params)` | Header value; keyword `_` becomes `-`; a value that cannot split the header. |
+| `build(type, /, filename=None, **params)` | Header value that cannot be split; keyword `_` becomes `-`; a `ContentDisposition` as `type` is written with its names as they are. |
 | `safe_filename(name, *, default="download", max_bytes=255)` | A single harmless file name, or `default`. |
 | `ContentDispositionError` | `ValueError` subclass with `position` (or `None`). Wrong argument types raise `TypeError`. |
 

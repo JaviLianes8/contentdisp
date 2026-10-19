@@ -21,8 +21,9 @@ TCHAR = r"[!#$%&'*+\-.^_`|~0-9A-Za-z]"
 OWS = r"[ \t]*"
 QUOTED = r'"(?:[\t !#-\[\]-~\x80-\U0010ffff]|\\[\t -~\x80-\U0010ffff])*"'
 EXT = r"[A-Za-z0-9!#$%&+\-^_`{}~]+'[A-Za-z0-9\-]*'(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9!#$&+\-.^_`|~])*"
-PLAIN_NAME = rf"(?:{TCHAR}*[!#$%&'+\-.^_`|~0-9A-Za-z])"
-PARM = rf"(?:{PLAIN_NAME}{OWS}={OWS}(?:{TCHAR}+|{QUOTED})|{TCHAR}*\*{OWS}={OWS}{EXT})"
+# An ext-token is a token followed by "*" (RFC 6266 4.1), so "*" alone is a plain name.
+PLAIN_NAME = rf"(?:\*|{TCHAR}*[!#$%&'+\-.^_`|~0-9A-Za-z])"
+PARM = rf"(?:{PLAIN_NAME}{OWS}={OWS}(?:{TCHAR}+|{QUOTED})|{TCHAR}+\*{OWS}={OWS}{EXT})"
 HEADER = re.compile(rf"{OWS}{TCHAR}+(?:{OWS};{OWS}{PARM})*{OWS}")
 NAME = re.compile(rf";{OWS}({TCHAR}+){OWS}=")
 
@@ -101,7 +102,7 @@ def _oracle(header: str) -> bool:
     names = [name.lower() for name in NAME.findall(_without_quoted(header))]
     if len(names) != len(set(names)):
         return False
-    return all(_ext_ok(value) for value in re.findall(rf"\*{OWS}={OWS}({EXT})", header))
+    return all(_ext_ok(value) for value in re.findall(rf"{TCHAR}\*{OWS}={OWS}({EXT})", header))
 
 
 def _without_quoted(header: str) -> str:
