@@ -110,7 +110,11 @@ def test_safe_filename_time_grows_linearly(shape: str) -> None:
 def test_huge_input_never_reaches_a_message_whole(call: Callable[[str], object]) -> None:
     with pytest.raises(ContentDispositionError) as caught:
         call("q" * 1_000_000)
-    assert len(str(caught.value)) < 200 and "q" * 41 not in str(caught.value)
+    message = str(caught.value)
+    assert len(message) < 200 and "q" * 37 not in message
+    # The quoted input is cut to exactly 40 characters: its opening quote, 36 more, "...".
+    if "'q" in message:
+        assert "'" + "q" * 36 + "..." in message
 
 
 def test_a_four_megabyte_header_is_read_in_both_modes() -> None:
