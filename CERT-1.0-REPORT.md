@@ -14,7 +14,7 @@ Progress:
 - [x] Packaging, e2e and upgrade from PyPI 0.2.1, every Python (items 8, 10, 13, 14)
 - [x] Author mutation round (item 18)
 - [x] Gates (item 15)
-- [ ] Five QA lenses report PASS (item 19): rounds 1 to 6 findings fixed, re-verification pending
+- [ ] Five QA lenses report PASS (item 19): rounds 1 to 8 findings fixed, re-verification pending
 - [ ] Independent reviewer reports PASS (item 16)
 - [x] PR #4 opened, trace guard CLEAN (item 17); merge and publish left to the maintainer
 
@@ -149,10 +149,10 @@ that commit fails it.
 
 ## Gates (item 15)
 
-Latest run at 13fe189 on Elena's PC (Python 3.14.2) from a fresh clone, each command on
+Latest run at d062331 on Elena's PC (Python 3.14.2) from a fresh clone, each command on
 its own, with the fetched sources, Node.js, werkzeug, aiohttp, multipart, the 0.2.1
 oracle, `CONTENTDISP_E2E=1` and `CONTENTDISP_E2E_PYPI=1`: `ruff format --check .`,
-`ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` (800 passed,
+`ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` (848 passed,
 no skip) all exit 0. Earlier runs after each QA round are listed with that round below.
 
 ## QA lenses (item 19)
@@ -375,7 +375,34 @@ the control class without LF or with HTAB are all killed.
 
 Gates: see Gates (13fe189, 800 passed, no skip).
 
-Re-verification of round 7 by the same lenses: pending.
+Re-verification of round 7 by the same lenses: lenses b and e, see round 8.
+
+### Round 8 (lenses b and e at 5ae5f73)
+
+Lens b found its round 7 finding fixed for language parts closed by their quote (its
+seeded fuzz of 6000 headers went from 50 late positions to 2); lens e found its three
+round 7 findings killed by the default gate and the BASE run green. Each reported one
+residual case in the code changed in round 7. None of the findings is disputed. The
+position cases were added first and failed on 5ae5f73 (5 cases in
+`tests/test_ext_positions.py` and the brute-force test in
+`tests/test_ext_language_prefix.py`); the control contract passes on 5ae5f73, as it pins
+behaviour that was right, and was checked against mutants instead. The fixes are in
+d062331.
+
+| Id | Finding | What changed |
+| --- | --- | --- |
+| b/N1b | A language part not closed by its quote (`UTF-8'-en`, `UTF-8'-en)'a`, `UTF-8'1en`, `0%'c0`) was reported at the end of the part, after the first offending character | Strict parsing reports such a part at its first character that no RFC 5646 tag can continue with (28, 28, 28 and 26 in the reviewer's cases, 48 in the fuzz case), with the message `malformed language tag in extended value`; when every tag could still go on (`UTF-8'en-`, `UTF-8'en-a`, `UTF-8'x`), the grammar error after the part stands (31, 32, 29). A part closed by its quote keeps the start-of-tag rule. `tag_prefix_length` in `_langtag.py` finds that character with a binary search over starts that some tag continues (a start is filled to a tag with letters or digits and one more subtag; grandfathered tags are compared whole), so a long part takes a logarithmic number of linear probes (three new shapes pass the growth check in `tests/test_hostile.py`). `tests/test_ext_language_prefix.py` checks every language of up to 4 characters over `a`, `x`, `0` and `-` against the starts of every tag of up to 9 such characters accepted by the hand-written `tests/langtag_oracle.py`, plus every start of every grandfathered tag. `parse` and `decode_ext_value` docstrings, GUIDE and CHANGELOG updated |
+| e/N4-D12 | The rule that the language part is closed by its quote was not pinned | `("attachment; filename*=UTF-8'x", "malformed extended value", 29)` added as asked. The second proposed case, `UTF-8'-en_US'a`, now gives `malformed language tag` at 28 by the b/N1b fix (no tag starts with `-`), so it is pinned with that result. The mutant that drops the quote check (an unclosed part reported at its start whenever it is not a tag) fails both cases above and `0%'c0` (25 instead of 26), and turning the unclosed check off fails the reviewer's b/N1b cases |
+| e/N5-C12 | The control set was pinned by samples only | `tests/test_ext_control_set.py` checks every code point but the surrogates (U+0000 to U+10FFFF) in UTF-8, in both modes: each of the 64 refused ones alone (strict raises at the value start, lenient falls back to the plain `filename`), and every other one in blocks of 512 that must decode whole; and every ISO-8859-1 octet 0x00 to 0xFF alone, in both modes |
+
+Mutants run on this PC against the new tests, each alone: `_CONTROL` plus U+FEFF (C12),
+plus U+2028 and U+2029 (C11), plus U+00A0, plus HTAB, plus U+1F600, plus U+10FFFF, plus
+U+FFFF, DEL left out, C1 starting at U+0080 and LF left out are all killed; the D12 mutant
+and the unclosed check turned off are killed.
+
+Gates: see Gates (d062331, 848 passed, no skip).
+
+Re-verification of round 8 by the same lenses: pending.
 
 ## Independent review (item 16)
 
