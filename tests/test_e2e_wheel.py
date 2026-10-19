@@ -108,7 +108,8 @@ def test_wheel_contents_and_metadata(dist: Path) -> None:
         "Project-URL: Changelog, https://github.com/JaviLianes8/contentdisp/blob/main/CHANGELOG.md",
     ]:
         assert line in metadata.splitlines(), line
-    assert "Requires-Dist" not in metadata
+    requires = [line for line in metadata.splitlines() if line.startswith("Requires-Dist:")]
+    assert requires and all(line.endswith("; extra == 'dev'") for line in requires), requires
 
 
 def test_sdist_contents(dist: Path) -> None:
@@ -127,7 +128,9 @@ def test_sdist_contents(dist: Path) -> None:
     assert upstream == ["tests/upstream/MANIFEST.json"], upstream
     for absent in ("IMPROVEMENTS", "CERT-1.0", ".txt", ".html", ".cc", ".tgz", ".ps1"):
         assert not any(absent in name for name in names), absent
-    assert not any(name.startswith(".") or "__pycache__" in name for name in names)
+    # hatchling always adds .gitignore; nothing else hidden and no bytecode ships.
+    hidden = {name for name in names if name.startswith(".") or "__pycache__" in name}
+    assert hidden == {".gitignore"}, hidden
 
 
 def test_installed_wheel_end_to_end(dist: Path, tmp_path: Path) -> None:
