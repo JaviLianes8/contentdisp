@@ -11,6 +11,7 @@ import importlib.util
 import os
 import pickle
 import random
+import re
 import sys
 import unicodedata
 from collections.abc import Callable
@@ -66,6 +67,10 @@ def _first_segment_name(text: str) -> str | None:
     return name.lower() if equals and is_token(name) else None
 
 
+# A parameter named "*" alone, which 1.0.0 reads as an ordinary name (CHANGELOG).
+_BARE_STAR = re.compile(r"(?:^|;)[ \t]*\*[ \t]*=")
+
+
 def _removable(char: str) -> bool:
     """A character safe_filename removes (control, surrogate or format but a joiner)."""
     category = unicodedata.category(char)
@@ -81,8 +86,9 @@ def test_parsing_agrees_with_0_2_1_except_where_documented(old: ModuleType, stri
         try:
             before = old.parse(text, strict=strict)
         except ValueError:
-            with pytest.raises(ValueError):
-                contentdisp.parse(text, strict=strict)
+            if not _BARE_STAR.search(text):
+                with pytest.raises(ValueError):
+                    contentdisp.parse(text, strict=strict)
             continue
         try:
             after = contentdisp.parse(text, strict=strict)
@@ -91,8 +97,9 @@ def test_parsing_agrees_with_0_2_1_except_where_documented(old: ModuleType, stri
             continue
         assert after.type == before.type, text
         extra = {k for k, v in after.params.items() if before.params.get(k) != v}
-        assert not strict or not extra, text
-        assert extra <= {_first_segment_name(text)}, text
+        star = {"*"} if _BARE_STAR.search(text) else set()
+        assert not strict or extra <= star, text
+        assert extra <= {_first_segment_name(text), *star}, text
         missing = set(before.params) - set(after.params)
         assert all(not is_token(name) or "\u212a" in text for name in missing), text
         if is_token(after.type):
