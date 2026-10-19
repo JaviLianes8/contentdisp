@@ -19,11 +19,11 @@ defaults and error types follow Semantic Versioning from this release on.
 - `ContentDisposition` with `type`, `params`, `filename` and `is_attachment`.
 - `build` writes a header that cannot be split, following RFC 6266 Appendix D, and
   RFC 7578 for `form-data`; given a `ContentDisposition`, it writes that value again,
-  unless its type is not a token or a value holds a control character or a lone
-  surrogate.
+  unless its type is not a token, a name ends in `*` or a value holds a control
+  character or a lone surrogate.
 - `safe_filename` reduces an advisory name to one safe to create in a folder.
 - `ContentDispositionError` (a `ValueError`) for invalid values, with the `position` of
-  the first offending character for strict parsing; `TypeError` for arguments of the
+  the error in the header for strict parsing (see the GUIDE); `TypeError` for arguments of the
   wrong type.
 
 ### Changed
@@ -36,25 +36,30 @@ defaults and error types follow Semantic Versioning from this release on.
   Headers whose type is not a token (lenient parsing only) or whose values hold a
   control character (a C1 control is legal obs-text for strict parsing) or a lone
   surrogate (a `str` header can carry one, and parsing takes it as obs-text) are refused
-  with `ContentDispositionError`. A parameter name of a `ContentDisposition` that is
-  not a `str` raises `TypeError`.
+  with `ContentDispositionError`, and so are names ending in `*`, which parsing returns
+  for an extended parameter whose own name ends in `*` (`a**=UTF-8''x` gives `a*`). A
+  parameter name of a `ContentDisposition` that is not a `str` raises `TypeError`.
 - A parameter named `*` alone is an ordinary parameter, as RFC 6266 defines an extended
   name as a token followed by `*`: `attachment; *=foo` gives `{'*': 'foo'}` in both modes
   (strict parsing refused it, lenient parsing dropped it, and `*=UTF-8''x` was stored
   under the empty name), and `build` writes it. `**` is its extended form.
 - `build` reports a lone surrogate as `a lone surrogate`, no longer as a control
   character.
-- `safe_filename` and the ASCII fallback of `build` drop every combining mark after the
-  30th in a run (counted on the NFKD decomposition) before normalising, so hostile names
-  take linear time. The limit is the one of the Unicode Stream-Safe Text Format (UAX
-  #15), which instead keeps the marks and splits the run with U+034F.
+- `safe_filename` and the ASCII fallback of `build` drop every non-starter (a character
+  with a non-zero canonical combining class) after the 30th in a run (counted on the
+  NFKD decomposition) before normalising, so hostile names take linear time. The limit
+  is the one of the Unicode Stream-Safe Text Format (UAX #15), which instead keeps the
+  non-starters and splits the run with U+034F.
 - `safe_filename` and `build` work on a plain copy of a `str` subclass, so overriding
-  `isascii` or `__iter__` can no longer skip normalisation (full-width slashes then
-  survived the split) or hide a control character. `safe_filename` always returns a
-  plain `str`, `default` included (a `str` subclass given as `default` used to come
-  back as that subclass).
+  `__iter__` can no longer hide a control character from `build`. `safe_filename`
+  always returns a plain `str`, `default` included (a `str` subclass given as `default`
+  used to come back as that subclass).
 - Every `ValueError` the library raises is now a `ContentDispositionError`, a subclass,
   so `except ValueError` keeps working.
+- Strict and lenient parsing take the ISO-8859-1 octets 0x00 to 0x1F and 0x7F, like
+  0x80 to 0x9F, as invalid in an extended value: ISO/IEC 8859-1 has no graphic
+  character there. `filename*=iso-8859-1''%00` used to decode to NUL; now strict parsing
+  raises and lenient parsing ignores the parameter, so a plain `filename` wins.
 - Strict parsing checks the language part of an extended value against the RFC 5646
   grammar that RFC 8187 refers to (`UTF-8'1'a` used to pass); lenient parsing still
   skips any language made of letters, digits and hyphens.
@@ -88,11 +93,17 @@ defaults and error types follow Semantic Versioning from this release on.
   longer passes as `k`.
 - A strict quoted-string cut off right after a backslash is reported as unterminated, at
   the end of the header.
+- `parse` works on a plain copy of a `str` or `bytes` subclass: overriding `replace`
+  let lenient parsing return raw CR and LF, and a `decode` that returned something else
+  raised `AttributeError`.
+- An argument of the wrong type whose class has a `__name__` that raises (through a
+  metaclass) gets the documented `TypeError`; `parse` and `build` raised the class's own
+  error.
 
 ### Added
 
-- `ContentDispositionError`, a `ValueError` subclass with the `position` of the first
-  offending character for strict parsing, raised for every invalid value.
+- `ContentDispositionError`, a `ValueError` subclass with the `position` of the error
+  in the header for strict parsing, raised for every invalid value.
 - Runnable examples in every public docstring, run as doctests, and a GUIDE.
 - Tests against the RFC 6266, RFC 8187, RFC 9110, RFC 5646, RFC 5234 and RFC 7578 texts
   as fetched by `scripts/fetch_upstream.py` (grammar rules compiled from the text), the tc2231 corpus,

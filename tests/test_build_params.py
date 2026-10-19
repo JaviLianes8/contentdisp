@@ -67,6 +67,30 @@ def test_a_name_given_twice_across_arguments_is_refused(call: Callable[[], objec
         call()
 
 
+@pytest.mark.parametrize(
+    "header", ["attachment; a**=UTF-8''x", "attachment; filename**=UTF-8''e.exe; filename=ok.txt"]
+)
+def test_a_parsed_name_ending_in_a_star_is_refused(header: str) -> None:
+    # "a**=..." is the extended form of the token "a*": parsing stores it under "a*".
+    parsed = parse(header, strict=True)
+    assert any(name.endswith("*") for name in parsed.params)
+    with pytest.raises(ContentDispositionError, match="not an extended name"):
+        build(parsed)
+
+
+@pytest.mark.parametrize(
+    "disposition",
+    ["Form-Data", " form-data", "form-data ", "\tFORM-DATA\t", ContentDisposition("FORM-DATA")],
+    ids=repr,
+)
+def test_form_data_is_recognised_in_any_case_and_with_spaces(
+    disposition: str | ContentDisposition,
+) -> None:
+    for value in ('a"b.txt', "résumé.pdf"):
+        assert build(disposition, value, name="f") == build("form-data", value, name="f")
+        assert "filename*" not in build(disposition, value, name="f")
+
+
 def test_a_value_whose_type_is_not_a_token_is_refused() -> None:
     with pytest.raises(ContentDispositionError, match="must be a token"):
         build(parse('"attachment"; filename=a.txt'))

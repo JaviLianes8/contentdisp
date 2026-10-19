@@ -121,7 +121,7 @@ def _ext_ok(value: str) -> bool:
         except UnicodeDecodeError:
             return False
     if charset.lower() == "iso-8859-1":
-        return not any(0x80 <= octet <= 0x9F for octet in octets)
+        return not any(octet < 0x20 or 0x7F <= octet <= 0x9F for octet in octets)
     return True
 
 

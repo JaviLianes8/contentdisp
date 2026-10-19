@@ -81,3 +81,17 @@ def test_a_quoted_value_ends_at_its_closing_quote() -> None:
 
 def test_a_trailing_lone_backslash_in_an_open_quote_is_dropped() -> None:
     assert parse('attachment; filename="abc\\').filename == "abc"
+
+
+@pytest.mark.parametrize(
+    ("header", "params"),
+    [
+        (r"attachment; filename=C:\dir\;size=3", {"filename": "C:\\dir\\", "size": "3"}),
+        (r"attachment; filename=a\; size=3", {"filename": "a\\", "size": "3"}),
+        (r"attachment; x=\;y=\\", {"x": "\\", "y": "\\\\"}),
+    ],
+)
+def test_a_backslash_outside_quotes_never_hides_the_next_semicolon(
+    header: str, params: dict[str, str]
+) -> None:
+    assert parse(header).params == params

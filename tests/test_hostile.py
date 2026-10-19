@@ -13,19 +13,30 @@ UNIT = 40_000
 
 
 def _seconds(work: Callable[[], object]) -> float:
-    best = float("inf")
-    for _ in range(3):
-        start = time.perf_counter()
-        work()
-        best = min(best, time.perf_counter() - start)
-    return best
+    start = time.perf_counter()
+    work()
+    return time.perf_counter() - start
 
 
 def _linear(make: Callable[[int], Callable[[], object]]) -> None:
-    """Four times the input may take at most about four times as long (with slack)."""
-    small = _seconds(make(UNIT))
-    large = _seconds(make(4 * UNIT))
-    assert large < 10 * max(small, 0.002) + 0.05, (small, large)
+    """Four times the input may take at most about four times as long (with slack).
+
+    Wall-clock time is noisy when other processes load the machine, so the two sizes are
+    timed in turns (load hits both alike), the best of each is kept, and a round that
+    looks slow is measured again. A quadratic cost gives about 16 times in every round,
+    so only a real blowup fails all of them.
+    """
+    small_work, large_work = make(UNIT), make(4 * UNIT)
+    rounds: list[tuple[float, float]] = []
+    for _ in range(4):
+        small = large = float("inf")
+        for _ in range(3):
+            small = min(small, _seconds(small_work))
+            large = min(large, _seconds(large_work))
+        if large < 10 * max(small, 0.002) + 0.05:
+            return
+        rounds.append((small, large))
+    raise AssertionError(f"not linear in any round: {rounds}")
 
 
 HEADERS: dict[str, Callable[[int], str]] = {

@@ -54,7 +54,7 @@ from contentdisp import ContentDispositionError, parse
 print(parse("attachment; filename=a.txt; filename=b.txt").filename)
 # a.txt
 
-# strict=True: the grammar exactly, with the position of the first offending character.
+# strict=True: the grammar exactly, with the position of the error in the header.
 try:
     parse("attachment; filename=a.txt; filename=b.txt", strict=True)
 except ContentDispositionError as error:
@@ -89,11 +89,13 @@ Reading this header right is easy to get wrong, and the Python tools around get 
 wrong in different ways. `werkzeug.http.parse_options_header` (werkzeug 3.1.9) lets
 whichever of `filename` and `filename*` comes last win, and returns no file name at all
 for `INLINE; FILENAME= "an example.html"`, an example from RFC 6266 itself. Python's
-`email` package keeps whichever comes first, so it reads the ASCII fallback of a header
-written the way RFC 6266 advises, and `multipart` 2.0.1 ignores `filename*`. `aiohttp`
-picks `filename*` in either order, inside a whole HTTP framework. `rfc6266`, the package named after the
-RFC, has had no release since 2013 and no longer builds with current setuptools. And for
-saving the file, `werkzeug.utils.secure_filename("東京.txt")` returns `"txt"`.
+`email` package reads the ASCII fallback of a header written the way RFC 6266 advises:
+`Message.get_filename` always returns the plain `filename`, and `EmailMessage` keeps
+whichever of the two comes first. `multipart` 2.0.1 ignores `filename*`. `aiohttp` picks
+`filename*` in either order, inside a whole HTTP framework. `rfc6266`, the package named
+after the RFC, has had no release since 2013 and no longer builds with current
+setuptools. And for saving the file, `werkzeug.utils.secure_filename("東京.txt")`
+returns `"txt"`.
 
 `contentdisp` is small, typed and dependency-free: it parses strictly or leniently,
 builds headers that cannot be split, and makes the safe file name the easy one. It is

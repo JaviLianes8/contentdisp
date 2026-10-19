@@ -22,16 +22,17 @@ _TRAILING = " ."
 def safe_filename(name: str | None, *, default: str = "download", max_bytes: int = 255) -> str:
     """Reduce ``name`` to a single, harmless file name, as RFC 6266 section 4.3 asks.
 
-    The name is NFKC-normalised (so full-width slashes become real ones; marks after the
-    30th in a run of combining marks are dropped, the Unicode Stream-Safe limit), cut to its last
-    ``/`` or ``\\`` segment, and stripped of control and invisible format characters
-    (bidi controls, zero-width spaces); other whitespace becomes a space. Windows-reserved
-    characters become ``_``. Leading dots, tildes, hyphens, spaces and combining marks
-    and trailing dots and spaces go; Windows device names such as ``CON`` or ``com1.txt``
-    get a ``_`` prefix; the result is cut to ``max_bytes`` of UTF-8, keeping a short
-    extension. ``default`` is returned unchanged (a plain ``str``) when nothing usable is
-    left (``None``, ``..``, ``/``). ``TypeError`` for arguments of the wrong type, and
-    ``ContentDispositionError`` when ``max_bytes`` is below 1, whatever the name.
+    The name is NFKC-normalised (so full-width slashes become real ones; non-starters,
+    characters with a non-zero canonical combining class, after the 30th in a run are
+    dropped, the Unicode Stream-Safe limit), cut to its last ``/`` or ``\\`` segment, and
+    stripped of control and invisible format characters (bidi controls, zero-width
+    spaces); other whitespace becomes a space. Windows-reserved characters become ``_``.
+    Leading dots, tildes, hyphens, spaces and combining marks and trailing dots and spaces
+    go; Windows device names such as ``CON`` or ``com1.txt`` get a ``_`` prefix; the
+    result is cut to ``max_bytes`` of UTF-8, keeping a short extension. ``default`` is
+    returned unchanged (a plain ``str``) when nothing usable is left (``None``, ``..``,
+    ``/``). ``TypeError`` for arguments of the wrong type, and ``ContentDispositionError``
+    when ``max_bytes`` is below 1, whatever the name.
 
     >>> from contentdisp import safe_filename
     >>> safe_filename("../../etc/passwd")

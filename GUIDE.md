@@ -27,11 +27,16 @@ defines it, its language part an RFC 5646 language tag.
 - In a `str`, every character above U+00FF counts as `obs-text`: the text was decoded
   already, whatever its encoding.
 - Extended values are decoded in UTF-8 and ISO-8859-1. Invalid octets for the charset
-  (bad UTF-8, or the unassigned 0x80 to 0x9F in ISO-8859-1) are an error; a value in any
+  (bad UTF-8, or the controls 0x00 to 0x1F and 0x7F to 0x9F, which have no graphic
+  character in ISO/IEC 8859-1) are an error; a value in any
   other charset is well formed but not understood, so the parameter is ignored, in both
   modes.
 - `ContentDispositionError.position` is the index of the first character that breaks
-  the grammar; for an extended value that does not decode, the start of that value.
+  the grammar, a CR, LF or NUL included, or the end of the header when it stops too
+  early. Two errors point at the start of a part instead: an extended value whose octets
+  are invalid in its charset (its grammar holds) points at the start of the value, and a
+  language part made of letters, digits and hyphens that is not a well-formed tag points
+  at its first character.
 
 ```python
 from contentdisp import ContentDispositionError, parse
@@ -40,7 +45,7 @@ try:
     parse("attachment; filename*=UTF-8'en_US'report.pdf", strict=True)
 except ContentDispositionError as error:
     print(error)
-# malformed extended value for 'filename*' at offset 22
+# malformed extended value for 'filename*' at offset 30
 print(parse("attachment; filename*=x-mac-roman''r%E9sum%E9.pdf", strict=True).params)
 # {}
 ```
@@ -107,9 +112,11 @@ first. The type is positional only, so `type` itself can be a keyword parameter.
 In place of the type, `build` takes a `ContentDisposition`: its type and parameters are
 written first, names as they are (lower-cased), then `filename` and the keywords. This
 writes a parsed header again, `build(parse(header))`, and reaches the names a keyword
-cannot spell, such as `x_y` or `*`. Three kinds of parsed header cannot be written
+cannot spell, such as `x_y` or `*`. Four kinds of parsed header cannot be written
 again, and `build` refuses them with `ContentDispositionError`: a type that is not a
-token, which only lenient parsing returns; a value holding a control character, such as a
+token, which only lenient parsing returns; a name ending in `*`, which parsing returns
+for an extended parameter whose own name ends in `*` (`a**=UTF-8''x` gives `a*`, and
+`build` never writes an extended name); a value holding a control character, such as a
 C1 control (U+0080 to U+009F), which RFC 9110 obs-text lets into a quoted-string; and a
 value holding a lone surrogate (U+D800 to U+DFFF), which a `str` can carry and parsing
 takes as obs-text like any other character above U+00FF.
@@ -153,11 +160,13 @@ print(build(parse("Attachment; x_y=1; type=2")))
 6266 section 4.3 and Microsoft's file naming rules, in this order:
 
 1. NFKC normalisation, so full-width slashes and dots become real ones. Before it, every
-   run of more than 30 combining marks (counted on the NFKD decomposition) loses the
-   marks after the 30th, which keeps the time linear on hostile names. The limit of 30
-   comes from the Unicode Stream-Safe Text Format (UAX #15), but UAX #15 keeps every
-   mark and splits the run with U+034F COMBINING GRAPHEME JOINER; this library drops
-   them, since no file name needs them. The ASCII fallback of `build` does the same.
+   run of more than 30 non-starters (characters with a non-zero canonical combining
+   class, counted on the NFKD decomposition) loses the ones after the 30th, which keeps
+   the time linear on hostile names; marks of class 0, such as U+20DD or U+093F, are
+   never dropped. The limit of 30 comes from the Unicode Stream-Safe Text Format (UAX
+   #15), but UAX #15 keeps every non-starter and splits the run with U+034F COMBINING
+   GRAPHEME JOINER; this library drops them, since no file name needs them. The ASCII
+   fallback of `build` does the same.
 2. Only the text after the last `/` or `\` is kept.
 3. Control characters, lone surrogates and invisible format characters (bidi controls,
    zero-width spaces, soft hyphens) are removed, except the joiners inside emoji and

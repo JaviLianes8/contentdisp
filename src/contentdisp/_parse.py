@@ -19,8 +19,9 @@ def parse(header: str | bytes, *, strict: bool = False) -> ContentDisposition:
     as RFC 9110 defines them, ext-value as RFC 8187 does, with an RFC 5646 language tag),
     a repeated parameter, or a ``name*`` value whose octets are invalid in its charset
     raises ``ContentDispositionError`` with the ``position`` of the first offending
-    character. A ``name*`` in a charset other than UTF-8 or ISO-8859-1 is ignored in
-    both modes.
+    character (for octets invalid in their charset or a malformed language tag, the
+    start of that value or tag). A ``name*`` in a charset other than UTF-8 or ISO-8859-1
+    is ignored in both modes.
 
     The default lenient mode gives the same result on every valid header and never
     raises ``ContentDispositionError``: it skips parameters it cannot read, ignores a
@@ -39,9 +40,12 @@ def parse(header: str | bytes, *, strict: bool = False) -> ContentDisposition:
     >>> parse(b'inline; filename="caf\\xe9.txt"').filename
     'café.txt'
     """
+    # Plain copies: a subclass could override decode, replace or indexing to change the result.
     if isinstance(header, bytes):
-        header = header.decode("latin-1")
-    elif not isinstance(header, str):
+        header = bytes.decode(header, "latin-1")
+    elif isinstance(header, str):
+        header = str.__str__(header)
+    else:
         raise TypeError(f"header must be str or bytes, not {type_name(header)}")
     if strict:
         return _parse_strict(header)
@@ -49,9 +53,18 @@ def parse(header: str | bytes, *, strict: bool = False) -> ContentDisposition:
 
 
 def _parse_strict(header: str) -> ContentDisposition:
-    for index, char in enumerate(header):
-        if char in "\r\n\0":
-            raise error("CR, LF and NUL are not allowed in a field value", index)
+    try:
+        return _read_strict(header)
+    except ContentDispositionError as problem:
+        # CR, LF and NUL break the grammar like any other character; when one of them is
+        # the first offending character, the message names the rule it breaks.
+        position = problem.position
+        if position is not None and position < len(header) and header[position] in "\r\n\0":
+            raise error("CR, LF and NUL are not allowed in a field value", position) from None
+        raise
+
+
+def _read_strict(header: str) -> ContentDisposition:
     disposition_type, pos = read_token(header, skip_ows(header, 0))
     if not disposition_type:
         raise error("missing disposition type", pos)
@@ -84,7 +97,8 @@ def _parse_strict(header: str) -> ContentDisposition:
             except UnsupportedCharsetError:
                 continue  # well-formed, just not understood: ignored like an unknown parameter
             except ContentDispositionError as problem:
-                raise error(f"{problem} for {show(name)}", value_start) from None
+                at = value_start + (problem.position or 0)
+                raise error(f"{problem} for {show(name)}", at) from None
         elif pos < len(header) and header[pos] == '"':
             value, pos = read_quoted(header, pos, strict=True)
             pairs.append((name, value))

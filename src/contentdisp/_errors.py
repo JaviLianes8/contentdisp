@@ -12,7 +12,8 @@ class ContentDispositionError(ValueError):
 
     It is a ``ValueError``, so code written for ``except ValueError`` keeps working.
     ``position`` is the index in the header of the first character that breaks the
-    grammar when the error comes from ``parse(header, strict=True)``, and ``None`` for
+    grammar when the error comes from ``parse(header, strict=True)`` (``parse`` names two
+    errors that point at the start of a value instead), and ``None`` for
     errors that do not come from reading a header (``build``, ``safe_filename``).
     Messages quote at most 40 characters of any input.
 
@@ -39,7 +40,12 @@ def show(value: object) -> str:
     return text if len(text) <= LIMIT else text[: LIMIT - 3] + "..."
 
 
+# The descriptor of type itself: a metaclass cannot override it, so reading the name of a
+# class never runs code that belongs to the value.
+_NAME = type.__dict__["__name__"]
+
+
 def type_name(value: object) -> str:
-    """The class name of ``value``, cut to the message limit."""
-    name = str(type(value).__name__)
+    """The class name of ``value``, cut to the message limit; never raises."""
+    name = str.__str__(_NAME.__get__(type(value)))
     return name if len(name) <= LIMIT else name[: LIMIT - 3] + "..."
