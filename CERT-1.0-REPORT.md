@@ -149,10 +149,10 @@ that commit fails it.
 
 ## Gates (item 15)
 
-Latest run at 1be185c on Elena's PC (Python 3.14.2) from a fresh clone, each command on
+Latest run at 13fe189 on Elena's PC (Python 3.14.2) from a fresh clone, each command on
 its own, with the fetched sources, Node.js, werkzeug, aiohttp, multipart, the 0.2.1
 oracle, `CONTENTDISP_E2E=1` and `CONTENTDISP_E2E_PYPI=1`: `ruff format --check .`,
-`ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` (749 passed,
+`ruff check .`, `mypy --strict src`, `mypy --strict src tests` and `pytest` (800 passed,
 no skip) all exit 0. Earlier runs after each QA round are listed with that round below.
 
 ## QA lenses (item 19)
@@ -348,7 +348,34 @@ checked against the PyPI 0.2.1 wheel (`replace` override, odd `decode`, metaclas
 
 Gates: see Gates (1be185c, 749 passed, no skip).
 
-Re-verification of round 6 by the same lenses: pending.
+Re-verification of round 6 by the same lenses: done in round 7 below.
+
+### Round 7 (lenses a, b, c and e at 4cf885f)
+
+Lenses a, b, c and e re-checked every round 6 finding and found them fixed (lens d had
+none). Lens a ran every README and GUIDE example, the doctests and 38 probes; lens b ran
+48 hand probes and a seeded fuzz of 6000 headers against its own grammar oracle; lens c
+compared 18,548 positions with its oracle and fuzzed 30,000 headers; lens e ran its own
+mutation round. None of the findings is disputed. Contract tests were added first and
+failed on 4cf885f (46 test cases in `tests/test_ext_controls.py` and
+`tests/test_ext_positions.py`, the ISO-8859-1 ones also for the new message); the pins for the surviving mutants were checked by
+running each mutant again on this PC. The fixes are in 13fe189.
+
+| Id | Finding | What changed |
+| --- | --- | --- |
+| a/N1 | The `ContentDispositionError` docstring said both exceptions point at the start of a value; the tag error points at the start of the tag | The docstring says "the start of a value or of its language tag" and refers to the GUIDE, which lists both |
+| a/N2, c/G1 | ISO-8859-1 control octets were refused, but the same controls in UTF-8 decoded, so lenient parsing could return a raw CR LF and strict parsing a NUL | Decoded text holding a control other than HTAB (U+0000 to U+0008, U+000A to U+001F, U+007F to U+009F) is invalid in both charsets: strict parsing raises `control character in extended value` at the start of the value, lenient parsing ignores the parameter. HTAB stays, as a quoted-string and `build` take it (refusing it broke `build`/`parse` round trips of a value with a tab, which `tests/test_fuzz.py` caught); 0.2.1 decoded `%09` in both charsets too (checked on the wheel). `parse` docstring, GUIDE (strict and lenient lists), CHANGELOG Changed, regex oracle in `tests/test_oracle.py`. Tests: `tests/test_ext_controls.py` |
+| b/N1 | A malformed language tag followed by a later grammar error was reported at the later error | When the RFC 8187 grammar fails and strict parsing finds a language part closed by its quote that is not a well-formed tag and starts before the first offending character, the error is the tag error at its start. Four reviewer cases pinned in `tests/test_ext_positions.py` (the fourth starts at 33: the reviewer's 34 counted one character too many) plus a control case with a valid tag |
+| e/N1-R16-R18 | `{`, `}` and `` ` `` in a charset were not pinned | `test_a_well_formed_unknown_charset_is_ignored` covers ``a!#$%&+-^_`{}~z``, `x{y}`, `` x`y `` and `x^y` in both modes; R16 and R18 are killed |
+| e/N2-R24 | A broken pct-encoding with a lowercase first hex digit was not pinned | `%aZ` (31) and `%e` (31) added to the position cases; R24 is killed |
+| e/N3-R02 | The 40-character cut of a class name was not pinned at its boundary | A 40-character class name is shown whole and a 41-character one as 37 characters and `...`, for `parse` and `build`; R02 is killed |
+
+Mutants re-run on this PC, each alone: R16, R18, R24, R02, the tag check turned off, and
+the control class without LF or with HTAB are all killed.
+
+Gates: see Gates (13fe189, 800 passed, no skip).
+
+Re-verification of round 7 by the same lenses: pending.
 
 ## Independent review (item 16)
 
