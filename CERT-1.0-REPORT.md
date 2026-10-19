@@ -14,7 +14,7 @@ Progress:
 - [x] Packaging, e2e and upgrade from PyPI 0.2.1, every Python (items 8, 10, 13, 14)
 - [x] Author mutation round (item 18)
 - [x] Gates (item 15)
-- [ ] Five QA lenses report PASS (item 19): rounds 1 and 2 findings fixed, re-verification pending
+- [ ] Five QA lenses report PASS (item 19): rounds 1 to 3 findings fixed, re-verification pending
 - [ ] Independent reviewer reports PASS (item 16)
 - [x] PR #4 opened, trace guard CLEAN (item 17); merge and publish left to the maintainer
 
@@ -194,7 +194,33 @@ and `pytest` all exit 0 (582 passed, 71 skipped without fetched files). With the
 sources, Node.js, werkzeug, aiohttp, multipart, the 0.2.1 oracle, `CONTENTDISP_E2E=1`
 and `CONTENTDISP_E2E_PYPI=1`: 653 passed, no skip.
 
-Re-verification of round 2 by the same lenses: pending.
+Re-verification of round 2 by the same lenses: done in round 3.
+
+### Round 3 (lenses a and e at dc988e8)
+
+Lens a re-checked a/N1 and a/N2 (fixed) and a/N3 (in part, see a/N4). Lens e re-ran its
+own mutation round (35 mutants on the laptop, Python 3.14.6): the round 2 survivors N16,
+N17, N28 and N28b are killed; of the 11 new survivors, U3, U8, B7 and B14 are shown
+equivalent by the lens and the other 7 are e/F1 to e/F3. None is disputed. The contract
+test for the one behaviour bug (a/N5) was added first and failed on dc988e8.
+
+| Id | Finding | What changed |
+| --- | --- | --- |
+| a/N4 | The docs named two kinds of parsed header `build` cannot write again; a lone surrogate (taken as obs-text when a `str` is parsed, even strictly) is a third | The GUIDE, the `build` docstring and both CHANGELOG entries list the lone surrogate as the third kind. Behaviour unchanged: strict parsing still accepts it, as the GUIDE says every `str` character above U+00FF is obs-text |
+| a/N5 | `safe_filename` returned a `str` subclass given as `default` unchanged, against the CHANGELOG promise of a plain `str` | `default` is copied with `str.__str__`, so the result is always a plain `str`. Docstring, GUIDE and the CHANGELOG entry say so. Test: `tests/test_str_subclasses.py::test_the_default_comes_back_as_a_plain_str` (also with a subclass overriding `__str__`) |
+| e/F1 | No test pinned the plain copy of a parameter name in `build` (B2) | A name overriding `__iter__` that hides CR LF is refused |
+| e/F2 | No test pinned the plain copy of the type in `build` (B1) | A type overriding `strip` and `__iter__` is refused, given as a `str` and as `ContentDisposition.type` |
+| e/F3 | No test pinned `str.__str__(x)` over `str(x)` (U4, S1, B8, B9, B10) | A subclass overriding `__str__` is checked and written by its real characters in `safe_filename` (name and `default`) and in the type, a name and a value of `build` |
+
+New tests are in `tests/test_str_subclasses.py`. Mutants re-run on this PC, each alone,
+against that file: B1, B2, B8, B9, B10 and U4 are killed, and so are removing the new
+`default` copy and replacing it with `str(default)`.
+
+Gates on Elena's PC (Python 3.14.2) from a clone of b0c822f, each on its own:
+`ruff format --check .`, `ruff check .`, `mypy --strict src`, `mypy --strict src tests`
+and `pytest` all exit 0 (592 passed, 71 skipped without fetched files).
+
+Re-verification of round 3 by the same lenses: pending.
 
 ## Independent review (item 16)
 
