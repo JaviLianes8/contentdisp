@@ -14,7 +14,7 @@ Progress:
 - [x] Packaging, e2e and upgrade from PyPI 0.2.1, every Python (items 8, 10, 13, 14)
 - [x] Author mutation round (item 18)
 - [x] Gates (item 15)
-- [ ] Five QA lenses report PASS (item 19): round 1 findings fixed, re-verification pending
+- [ ] Five QA lenses report PASS (item 19): rounds 1 and 2 findings fixed, re-verification pending
 - [ ] Independent reviewer reports PASS (item 16)
 - [x] PR #4 opened, trace guard CLEAN (item 17); merge and publish left to the maintainer
 
@@ -164,7 +164,37 @@ werkzeug, aiohttp, multipart, the 0.2.1 oracle, `CONTENTDISP_E2E=1` and
 `CONTENTDISP_E2E_PYPI=1`: 644 passed, no skip (the first run of this at e1284bd found the
 0.2.1 comparison still expecting the old bare `*` reading, fixed in b653a6a).
 
-Re-verification by the same lenses: pending.
+Re-verification by the same lenses: done in round 2.
+
+### Round 2 (lenses a, b, c and e at 7b14411)
+
+Every round 1 finding was re-checked by the lens that raised it and reported fixed (lens
+a: A1 to A5, A6 in part; lens b: F1; lens c: F1, now linear up to 1M characters; lens e:
+every round 1 mutant killed). The new findings are below; none is disputed. Contract
+tests for the two behaviour bugs (c/N1, c/N2) were added first and failed on 7b14411.
+
+| Id | Finding | What changed |
+| --- | --- | --- |
+| a/N1 | CONTRIBUTING said the tests never reach the network, false for the opt-in e2e tests | The sentence now covers only the tests that read fetched files; the e2e paragraph says `python -m build` downloads the build backend and `CONTENTDISP_E2E_PYPI=1` installs 0.2.1 from PyPI |
+| a/N2, b/F2 | GUIDE and CHANGELOG said the cut of a mark run to 30 is what UAX #15 does; UAX15-D4 keeps the marks and inserts U+034F | GUIDE step 1, the CHANGELOG entry and the `safe_filename` docstring now say the marks after the 30th are dropped, that only the limit comes from UAX #15, and that UAX #15 inserts U+034F instead |
+| a/N3 | `build(parse(header))` was promised without limits; a C1 control (legal obs-text for strict parsing) or a non-token type is refused | The promise is qualified in the `build` docstring, the GUIDE and both CHANGELOG entries |
+| c/N1 | A `str` subclass overriding `isascii` skipped the first NFKC pass of `safe_filename`, so full-width slashes became separators after the split | `_unicode.normalize` works on a plain copy (`str.__str__`); `build` copies its type, names and values the same way, so an overridden `__iter__` cannot hide a control character either. Tests: `tests/test_mark_runs.py`; CHANGELOG Changed |
+| c/N2 | A non-`str` parameter name in a `ContentDisposition` gave `ContentDispositionError` or an internal `TypeError` | `build` raises `TypeError: parameter names must be str, not ...`; tests in `tests/test_build_params.py` for `None`, `1` and `b"x"`; docstring and CHANGELOG |
+| e/G1 | NFKD counting of mark runs not pinned (N16) | `safe_filename("a¨" + 29 x U+0301 + U+0316)` pinned: U+0316 is the dropped 31st mark |
+| e/G2 | Which characters count as non-starters not pinned (N17) | A run of 40 U+093F (spacing mark, class 0) is kept whole |
+| e/G3 | Lower-casing a `ContentDisposition` type before the token check not caught (N28) | Kelvin-sign type and parameter name of a `ContentDisposition` are refused |
+
+Mutants re-run on this PC, each alone, against `tests/test_mark_runs.py` and
+`tests/test_build_params.py`: N16, N17 and N28 are killed, and so are removing the plain
+copy in `normalize` and removing the name type check.
+
+Gates on Elena's PC (Python 3.14.2) from a clone of 04a8fb7, each on its own:
+`ruff format --check .`, `ruff check .`, `mypy --strict src`, `mypy --strict src tests`
+and `pytest` all exit 0 (582 passed, 71 skipped without fetched files). With the fetched
+sources, Node.js, werkzeug, aiohttp, multipart, the 0.2.1 oracle, `CONTENTDISP_E2E=1`
+and `CONTENTDISP_E2E_PYPI=1`: 653 passed, no skip.
+
+Re-verification of round 2 by the same lenses: pending.
 
 ## Independent review (item 16)
 
